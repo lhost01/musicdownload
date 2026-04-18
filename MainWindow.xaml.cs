@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
 using 网易云音乐下载.ViewModels;
@@ -103,6 +104,34 @@ namespace 网易云音乐下载
             {
                 Storyboard.SetTarget(storyboard, element);
                 storyboard.Begin();
+            }
+        }
+
+        private MainViewModel ViewModel
+        {
+            get { return DataContext as MainViewModel; }
+        }
+
+        private void ProgressSlider_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            ViewModel?.BeginSeek();
+        }
+
+        private void ProgressSlider_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            CompleteSeek(sender);
+        }
+
+        private void ProgressSlider_LostMouseCapture(object sender, MouseEventArgs e)
+        {
+            CompleteSeek(sender);
+        }
+
+        private void CompleteSeek(object sender)
+        {
+            if (sender is Slider slider)
+            {
+                ViewModel?.CompleteSeek(slider.Value);
             }
         }
     }

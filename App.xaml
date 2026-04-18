@@ -1,5 +1,32 @@
 <Application x:Class="网易云音乐下载.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:网易云音乐下载"
+             xmlns:converters="clr-namespace:网易云音乐下载.Converters"
              StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Styles/RippleButtonStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- 转换器 -->
+            <local:InverseBoolConverter x:Key="InverseBoolConverter"/>
+            <local:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
+            <local:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+            <local:IntToVisibilityConverter x:Key="IntToVisibilityConverter"/>
+            <local:IntToBoolConverter x:Key="IntToBoolConverter"/>
+            <local:InputModeConverter x:Key="InputModeConverter"/>
+            <local:BoolToPlayPauseConverter x:Key="BoolToPlayPauseConverter"/>
+            <local:BoolToBackgroundConverter x:Key="BoolToBackgroundConverter"/>
+            <local:TimeSpanToSecondsConverter x:Key="TimeSpanToSecondsConverter"/>
+            <local:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
+            <local:EnumToBooleanConverter x:Key="EnumToBooleanConverter"/>
+            <local:ProgressBarWidthConverter x:Key="ProgressBarWidthConverter"/>
+            <local:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+            <converters:GradientStartConverter x:Key="GradientStartConverter"/>
+            <converters:GradientEndConverter x:Key="GradientEndConverter"/>
+            <converters:IconTextConverter x:Key="IconTextConverter"/>
+        </ResourceDictionary>
+    </Application.Resources>
 </Application>

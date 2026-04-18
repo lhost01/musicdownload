@@ -255,19 +255,19 @@ namespace 网易云音乐下载.Services
                                 byte[] testDecrypted = AesEcbDecrypt(xoredKey, possibleAesKeys[idx]);
                                 string testPrefix = testDecrypted.Length >= 17 ? Encoding.ASCII.GetString(testDecrypted, 0, 17) : "";
                                 
-                                System.Diagnostics.Debug.WriteLine($"尝试密钥 {keyNames[idx]} (ECB): 前缀 = {testPrefix}");
+                                System.Diagnostics.Debug.WriteLine(string.Format("尝试密钥 {keyNames[idx]} (ECB): 前缀 = {0}", testPrefix));
                                 
                                 if (testPrefix == "neteasecloudmusic")
                                 {
                                     decryptedKey = testDecrypted;
                                     usedKeyName = keyNames[idx];
-                                    System.Diagnostics.Debug.WriteLine($"✓ 找到正确密钥 (ECB): {usedKeyName}");
+                                    System.Diagnostics.Debug.WriteLine(string.Format("✓ 找到正确密钥 (ECB): {0}", usedKeyName));
                                     break;
                                 }
                             }
                             catch (Exception ex)
                             {
-                                System.Diagnostics.Debug.WriteLine($"密钥 {keyNames[idx]} (ECB) 解密失败：{ex.Message}");
+                                System.Diagnostics.Debug.WriteLine(string.Format("密钥 {keyNames[idx]} (ECB) 解密失败：{0}", ex.Message));
                             }
                         }
                         
@@ -287,19 +287,19 @@ namespace 网易云音乐下载.Services
                                     byte[] testDecrypted = AesCbcDecrypt(xoredKey, possibleAesKeys[idx], zeroIV);
                                     string testPrefix = testDecrypted.Length >= 17 ? Encoding.ASCII.GetString(testDecrypted, 0, 17) : "";
                                     
-                                    System.Diagnostics.Debug.WriteLine($"尝试密钥 {keyNames[idx]} (CBC): 前缀 = {testPrefix}");
+                                    System.Diagnostics.Debug.WriteLine(string.Format("尝试密钥 {keyNames[idx]} (CBC): 前缀 = {0}", testPrefix));
                                     
                                     if (testPrefix == "neteasecloudmusic")
                                     {
                                         decryptedKey = testDecrypted;
                                         usedKeyName = keyNames[idx];
-                                        System.Diagnostics.Debug.WriteLine($"✓ 找到正确密钥 (CBC): {usedKeyName}");
+                                        System.Diagnostics.Debug.WriteLine(string.Format("✓ 找到正确密钥 (CBC): {0}", usedKeyName));
                                         break;
                                     }
                                 }
                                 catch (Exception ex)
                                 {
-                                    System.Diagnostics.Debug.WriteLine($"密钥 {keyNames[idx]} (CBC) 解密失败：{ex.Message}");
+                                    System.Diagnostics.Debug.WriteLine(string.Format("密钥 {keyNames[idx]} (CBC) 解密失败：{0}", ex.Message));
                                 }
                             }
                         }
@@ -415,7 +415,7 @@ namespace 网易云音乐下载.Services
                             // 尝试所有候选密钥
                             foreach (byte[] testKey in candidateKeys)
                             {
-                                System.Diagnostics.Debug.WriteLine($"\n=== 尝试密钥长度 {testKey.Length} ===");
+                                System.Diagnostics.Debug.WriteLine(string.Format("\n=== 尝试密钥长度 {0} ===", testKey.Length));
                                 
                                 // 重置文件位置
                                 fs.Position = audioDataStart;
@@ -456,7 +456,7 @@ namespace 网易云音乐下载.Services
                             }
                             
                             // 使用找到的密钥进行完整流密码解密
-                            System.Diagnostics.Debug.WriteLine($"\n使用密钥长度：{rc4Key.Length}");
+                            System.Diagnostics.Debug.WriteLine(string.Format("\n使用密钥长度：{0}", rc4Key.Length));
                             fs.Position = audioDataStart;
 
                             RC4 finalRc4 = new RC4(rc4Key);

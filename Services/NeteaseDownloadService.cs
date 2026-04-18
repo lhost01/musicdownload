@@ -89,16 +89,16 @@ namespace 网易云音乐下载.Services
                 return new SongInfo
                 {
                     Id = songId,
-                    Name = $"歌曲 {songId}",
+                    Name = string.Format("歌曲 {0}", songId),
                     Artist = "未知艺术家",
                     Album = "未知专辑",
                     Duration = 240000, // 毫秒
-                    CoverUrl = $"https://p1.music.126.net/song/{songId}/cover.jpg"
+                    CoverUrl = string.Format("https://p1.music.126.net/song/{0}/cover.jpg", songId)
                 };
 
                 /*
                 // 实际 API 调用代码示例：
-                var url = $"{API_BASE_URL}/song/detail?ids={songId}";
+                var url = string.Format("{0}/song/detail?ids={1}", API_BASE_URL, songId);
                 var response = await _httpClient.GetAsync(url, cancellationToken);
                 response.EnsureSuccessStatusCode();
                 
@@ -108,7 +108,7 @@ namespace 网易云音乐下载.Services
                 var data = JsonConvert.DeserializeObject<dynamic>(json);
                 
                 if (data.code != 200)
-                    throw new Exception($"API 返回错误: {data.msg}");
+                    throw new Exception(string.Format("API 返回错误: {0}", data.msg));
                 
                 var song = data.songs[0];
                 return new SongInfo
@@ -128,7 +128,7 @@ namespace 网易云音乐下载.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"获取歌曲信息失败: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine(string.Format("获取歌曲信息失败: {0}", ex.Message));
                 return null;
             }
         }
@@ -166,11 +166,11 @@ namespace 网易云音乐下载.Services
                 await Task.Delay(300, cancellationToken);
 
                 // 模拟返回下载链接
-                return $"https://music.163.com/song/media/outer/url?id={songId}.mp3";
+                return string.Format("https://music.163.com/song/media/outer/url?id={0}.mp3", songId);
 
                 /*
                 // 实际 API 调用代码示例：
-                var url = $"{API_BASE_URL}/song/enhance/player/url?ids={songId}&br=320000";
+                var url = string.Format("{0}/song/enhance/player/url?ids={1}&br=320000", API_BASE_URL, songId);
                 var response = await _httpClient.GetAsync(url, cancellationToken);
                 response.EnsureSuccessStatusCode();
                 
@@ -178,7 +178,7 @@ namespace 网易云音乐下载.Services
                 var data = JsonConvert.DeserializeObject<dynamic>(json);
                 
                 if (data.code != 200)
-                    throw new Exception($"API 返回错误: {data.msg}");
+                    throw new Exception(string.Format("API 返回错误: {0}", data.msg));
                 
                 var songData = data.data[0];
                 if (songData.code != 200)
@@ -193,7 +193,7 @@ namespace 网易云音乐下载.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"获取下载链接失败: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine(string.Format("获取下载链接失败: {0}", ex.Message));
                 return null;
             }
         }
@@ -262,7 +262,7 @@ namespace 网易云音乐下载.Services
                 });
 
                 // 生成输出文件名
-                string safeFileName = GetSafeFileName($"{songInfo.Artist} - {songInfo.Name}.mp3");
+                string safeFileName = GetSafeFileName(string.Format("{0} - {1}.mp3", songInfo.Artist, songInfo.Name));
                 string outputPath = Path.Combine(outputFolder, safeFileName);
 
                 // 处理文件名冲突
@@ -270,7 +270,7 @@ namespace 网易云音乐下载.Services
                 string baseFileName = Path.GetFileNameWithoutExtension(safeFileName);
                 while (File.Exists(outputPath))
                 {
-                    safeFileName = $"{baseFileName}_{counter}.mp3";
+                    safeFileName = string.Format("{0}_{1}.mp3", baseFileName, counter);
                     outputPath = Path.Combine(outputFolder, safeFileName);
                     counter++;
                 }

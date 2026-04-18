@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -26,6 +27,9 @@ namespace 网易云音乐下载.ViewModels
         private CancellationTokenSource _conversionCts;
         private CancellationTokenSource _downloadCts;
         private string _playlistsBasePath;
+        private readonly string _playlistStorageConfigPath;
+        private bool _isSyncingPlaybackPosition;
+        private bool _isUserSeeking;
 
         private int _selectedTabIndex;
         public int SelectedTabIndex
@@ -74,6 +78,22 @@ namespace 网易云音乐下载.ViewModels
                     ((RelayCommand)OpenPlaylistCommand).RaiseCanExecuteChanged();
                     ((RelayCommand)PreviousSongCommand).RaiseCanExecuteChanged();
                     ((RelayCommand)NextSongCommand).RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        private PlaylistSongInfo _selectedSong;
+        public PlaylistSongInfo SelectedSong
+        {
+            get { return _selectedSong; }
+            set
+            {
+                if (SetProperty(ref _selectedSong, value))
+                {
+                    // 当选中歌曲改变时，通知 UI 更新
+                    OnPropertyChanged(nameof(SelectedSong));
+                    ((RelayCommand)CopySelectedSongInfoCommand)?.RaiseCanExecuteChanged();
+                    ((RelayCommand)CloseSelectedSongInfoCommand)?.RaiseCanExecuteChanged();
                 }
             }
         }
@@ -180,12 +200,25 @@ namespace 网易云音乐下载.ViewModels
             get { return _currentPositionSeconds; }
             set
             {
-                if (SetProperty(ref _currentPositionSeconds, value))
+                double clampedValue = ClampSeekSeconds(value);
+                if (SetProperty(ref _currentPositionSeconds, clampedValue))
                 {
-                    // 当用户拖动进度条时，更新播放位置
-                    if (_musicPlayerService != null && Math.Abs(_musicPlayerService.CurrentPosition.TotalSeconds - value) > 1)
+                    if (_isUserSeeking)
                     {
-                        _musicPlayerService.SetPosition(TimeSpan.FromSeconds(value));
+                        CurrentPosition = TimeSpan.FromSeconds(clampedValue);
+                        return;
+                    }
+
+                    if (_isSyncingPlaybackPosition || _musicPlayerService == null)
+                    {
+                        return;
+                    }
+
+                    if (Math.Abs(_musicPlayerService.CurrentPosition.TotalSeconds - clampedValue) > 0.5)
+                    {
+                        var targetPosition = TimeSpan.FromSeconds(clampedValue);
+                        _musicPlayerService.SetPosition(targetPosition);
+                        CurrentPosition = targetPosition;
                     }
                 }
             }
@@ -208,7 +241,18 @@ namespace 网易云音乐下载.ViewModels
         public double TotalDurationSeconds
         {
             get { return _totalDurationSeconds; }
-            set { SetProperty(ref _totalDurationSeconds, value); }
+            set
+            {
+                if (SetProperty(ref _totalDurationSeconds, value))
+                {
+                    OnPropertyChanged(nameof(CanSeekCurrentSong));
+                }
+            }
+        }
+
+        public bool CanSeekCurrentSong
+        {
+            get { return TotalDurationSeconds > 0; }
         }
 
         private bool _isPlaying;
@@ -408,6 +452,7 @@ namespace 网易云音乐下载.ViewModels
         public ICommand CancelDownloadCommand { get; private set; }
         public ICommand NavigateToConversionCommand { get; private set; }
         public ICommand NavigateToDownloadCommand { get; private set; }
+        public ICommand OpenUpdateLogCommand { get; private set; }
 
         #region 歌单相关命令
 
@@ -419,6 +464,10 @@ namespace 网易云音乐下载.ViewModels
         public ICommand AddConvertedFilesToPlaylistCommand { get; private set; }
         public ICommand BrowsePlaylistFolderCommand { get; private set; }
         public ICommand SelectPlaylistCommand { get; private set; }
+        public ICommand OpenPlaylistDetailCommand { get; private set; }
+        public ICommand SelectSongCommand { get; private set; }
+        public ICommand CloseSelectedSongInfoCommand { get; private set; }
+        public ICommand CopySelectedSongInfoCommand { get; private set; }
         public ICommand SetPlaylistCoverCommand { get; private set; }
         public ICommand RemovePlaylistCoverCommand { get; private set; }
         public ICommand BrowsePlaylistCoverCommand { get; private set; }
@@ -451,6 +500,7 @@ namespace 网易云音乐下载.ViewModels
             _converterService = new AudioConverterService();
             _downloadService = new NeteaseDownloadService();
             _musicPlayerService = new MusicPlayerService();
+            _playlistStorageConfigPath = GetPlaylistStorageConfigPath();
             NcmFiles = new ObservableCollection<NcmFileInfo>();
             DownloadTasks = new ObservableCollection<DownloadTaskInfo>();
             Playlists = new ObservableCollection<PlaylistInfo>();
@@ -478,6 +528,7 @@ namespace 网易云音乐下载.ViewModels
             CancelDownloadCommand = new RelayCommand(_ => CancelDownload(), _ => IsDownloading);
             NavigateToConversionCommand = new RelayCommand(_ => SelectedTabIndex = 0);
             NavigateToDownloadCommand = new RelayCommand(_ => SelectedTabIndex = 1);
+            OpenUpdateLogCommand = new RelayCommand(_ => OpenUpdateLog());
 
             // 歌单相关命令
             CreatePlaylistCommand = new RelayCommand(_ => CreatePlaylist(), _ => CanCreatePlaylist());
@@ -486,8 +537,12 @@ namespace 网易云音乐下载.ViewModels
             AddSongToPlaylistCommand = new RelayCommand(param => AddSongToPlaylist(param), _ => CanAddSongToPlaylist());
             RemoveSongFromPlaylistCommand = new RelayCommand(param => RemoveSongFromPlaylist(param), _ => CanRemoveSongFromPlaylist());
             AddConvertedFilesToPlaylistCommand = new RelayCommand(_ => AddConvertedFilesToPlaylist(), _ => CanAddConvertedFilesToPlaylist());
-            BrowsePlaylistFolderCommand = new RelayCommand(_ => BrowsePlaylistFolder());
+            BrowsePlaylistFolderCommand = new RelayCommand(param => BrowsePlaylistFolder(param));
             SelectPlaylistCommand = new RelayCommand(param => SelectPlaylist(param));
+            OpenPlaylistDetailCommand = new RelayCommand(param => OpenPlaylistDetail(param));
+            SelectSongCommand = new RelayCommand(param => SelectSong(param));
+            CloseSelectedSongInfoCommand = new RelayCommand(_ => CloseSelectedSongInfo(), _ => SelectedSong != null);
+            CopySelectedSongInfoCommand = new RelayCommand(_ => CopySelectedSongInfo(), _ => SelectedSong != null);
             SetPlaylistCoverCommand = new RelayCommand(_ => SetPlaylistCover(), _ => CanSetPlaylistCover());
             RemovePlaylistCoverCommand = new RelayCommand(_ => RemovePlaylistCover(), _ => CanRemovePlaylistCover());
             BrowsePlaylistCoverCommand = new RelayCommand(_ => BrowsePlaylistCover());
@@ -849,6 +904,24 @@ namespace 网易云音乐下载.ViewModels
             DownloadStatusText = "正在取消...";
         }
 
+        private void OpenUpdateLog()
+        {
+            try
+            {
+                var updateLogWindow = new 网易云音乐下载.UpdateLogWindow();
+                if (Application.Current != null && Application.Current.MainWindow != null)
+                {
+                    updateLogWindow.Owner = Application.Current.MainWindow;
+                }
+
+                updateLogWindow.Show();
+            }
+            catch (Exception ex)
+            {
+                PlaylistStatusText = string.Format("打开更新日志失败: {0}", ex.Message);
+            }
+        }
+
         #region 歌单相关方法
 
         private void LoadPlaylists()
@@ -856,11 +929,8 @@ namespace 网易云音乐下载.ViewModels
             try
             {
                 Playlists.Clear();
-                if (!Directory.Exists(_playlistsBasePath))
-                    return;
 
-                var directories = Directory.GetDirectories(_playlistsBasePath);
-                foreach (var dir in directories)
+                foreach (var dir in GetKnownPlaylistDirectories())
                 {
                     var playlist = new PlaylistInfo
                     {
@@ -871,12 +941,15 @@ namespace 网易云音乐下载.ViewModels
 
                     // 加载歌单中的歌曲
                     LoadSongsForPlaylist(playlist);
+                    playlist.CheckAndLoadCover();
                     Playlists.Add(playlist);
                 }
+
+                SavePlaylistStorageState();
             }
             catch (Exception ex)
             {
-                PlaylistStatusText = $"加载歌单失败: {ex.Message}";
+                PlaylistStatusText = string.Format("加载歌单失败: {0}", ex.Message);
             }
         }
 
@@ -913,16 +986,18 @@ namespace 网易云音乐下载.ViewModels
         {
             try
             {
-                string playlistName = NewPlaylistName.Trim();
-                string folderPath = Path.Combine(_playlistsBasePath, playlistName);
+                string inputText = NewPlaylistName.Trim();
+                string folderPath = ResolvePlaylistFolderPath(inputText);
+                string playlistName = Path.GetFileName(folderPath);
 
                 if (Directory.Exists(folderPath))
                 {
-                    MessageBox.Show($"歌单 \"{playlistName}\" 已存在。", "创建失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show(string.Format("歌单文件夹 \"{0}\" 已存在。", folderPath), "创建失败", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
                 Directory.CreateDirectory(folderPath);
+                PlaylistInfo.EnsureMarkerFile(folderPath);
 
                 var playlist = new PlaylistInfo
                 {
@@ -931,14 +1006,21 @@ namespace 网易云音乐下载.ViewModels
                     CreatedTime = DateTime.Now
                 };
 
+                if (!string.IsNullOrEmpty(NewPlaylistCoverPath) && File.Exists(NewPlaylistCoverPath))
+                {
+                    playlist.SetCoverImage(NewPlaylistCoverPath);
+                }
+
                 Playlists.Add(playlist);
                 SelectedPlaylist = playlist;
                 NewPlaylistName = string.Empty;
-                PlaylistStatusText = $"歌单 \"{playlistName}\" 创建成功";
+                NewPlaylistCoverPath = string.Empty;
+                SavePlaylistStorageState();
+                PlaylistStatusText = string.Format("歌单 \"{0}\" 创建成功", playlistName);
             }
             catch (Exception ex)
             {
-                PlaylistStatusText = $"创建歌单失败: {ex.Message}";
+                PlaylistStatusText = string.Format("创建歌单失败: {0}", ex.Message);
             }
         }
 
@@ -952,7 +1034,7 @@ namespace 网易云音乐下载.ViewModels
             if (SelectedPlaylist == null) return;
 
             var result = MessageBox.Show(
-                $"确定要删除歌单 \"{SelectedPlaylist.Name}\" 吗？\n歌单中的歌曲文件将被移动到回收站。",
+                string.Format("确定要删除歌单 \"{0}\" 吗？\n歌单中的歌曲文件将被移动到回收站。", SelectedPlaylist.Name),
                 "确认删除",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
@@ -967,13 +1049,14 @@ namespace 网易云音乐下载.ViewModels
                     Directory.Delete(SelectedPlaylist.FolderPath, true);
                 }
 
-                PlaylistStatusText = $"歌单 \"{SelectedPlaylist.Name}\" 已删除";
+                PlaylistStatusText = string.Format("歌单 \"{0}\" 已删除", SelectedPlaylist.Name);
                 Playlists.Remove(SelectedPlaylist);
                 SelectedPlaylist = null;
+                SavePlaylistStorageState();
             }
             catch (Exception ex)
             {
-                PlaylistStatusText = $"删除歌单失败: {ex.Message}";
+                PlaylistStatusText = string.Format("删除歌单失败: {0}", ex.Message);
             }
         }
 
@@ -989,23 +1072,27 @@ namespace 网易云音乐下载.ViewModels
             try
             {
                 string newName = NewPlaylistName.Trim();
-                if (SelectedPlaylist.Rename(newName, _playlistsBasePath))
+                if (SelectedPlaylist.Rename(newName))
                 {
                     NewPlaylistName = string.Empty;
-                    PlaylistStatusText = $"歌单已重命名为 \"{newName}\"";
+                    SavePlaylistStorageState();
+                    PlaylistStatusText = string.Format("歌单已重命名为 \"{0}\"", newName);
                 }
                 else
                 {
-                    MessageBox.Show($"无法重命名歌单，名称可能已存在。", "重命名失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show(string.Format("无法重命名歌单，名称可能已存在。"), "重命名失败", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
             }
             catch (Exception ex)
             {
-                PlaylistStatusText = $"重命名歌单失败: {ex.Message}";
+                PlaylistStatusText = string.Format("重命名歌单失败: {0}", ex.Message);
             }
         }
 
-        private PlaylistInfo CurrentPlaylist => IsPlaylistDetailView ? PlaylistDetailPlaylist : SelectedPlaylist;
+        private PlaylistInfo CurrentPlaylist
+        {
+            get { return IsPlaylistDetailView ? PlaylistDetailPlaylist : SelectedPlaylist; }
+        }
 
         private bool CanAddSongToPlaylist()
         {
@@ -1049,7 +1136,7 @@ namespace 网易云音乐下载.ViewModels
                     catch { }
                 }
 
-                PlaylistStatusText = $"已添加 {addedCount} 首歌曲到歌单 \"{playlist.Name}\"";
+                PlaylistStatusText = string.Format("已添加 {0} 首歌曲到歌单 \"{1}\"", addedCount, playlist.Name);
             }
         }
 
@@ -1067,7 +1154,7 @@ namespace 网易云音乐下载.ViewModels
             if (song == null) return;
 
             var result = MessageBox.Show(
-                $"确定要从歌单中删除 \"{song.DisplayName}\" 吗？\n文件将被永久删除。",
+                string.Format("确定要从歌单中删除 \"{0}\" 吗？\n文件将被永久删除。", song.DisplayName),
                 "确认删除",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
@@ -1091,11 +1178,11 @@ namespace 网易云音乐下载.ViewModels
                     _musicPlayerService.Stop();
                 }
 
-                PlaylistStatusText = $"已从歌单移除 \"{song.DisplayName}\"";
+                PlaylistStatusText = string.Format("已从歌单移除 \"{0}\"", song.DisplayName);
             }
             catch (Exception ex)
             {
-                PlaylistStatusText = $"移除歌曲失败: {ex.Message}";
+                PlaylistStatusText = string.Format("移除歌曲失败: {0}", ex.Message);
             }
         }
 
@@ -1141,24 +1228,25 @@ namespace 网易云音乐下载.ViewModels
                     catch { }
                 }
 
-                PlaylistStatusText = $"已添加 {addedCount} 首歌曲到歌单 \"{SelectedPlaylist.Name}\"";
+                PlaylistStatusText = string.Format("已添加 {0} 首歌曲到歌单 \"{1}\"", addedCount, SelectedPlaylist.Name);
             }
         }
 
-        private void BrowsePlaylistFolder()
+        private void BrowsePlaylistFolder(object param)
         {
-            if (SelectedPlaylist == null) return;
+            var playlist = param as PlaylistInfo ?? CurrentPlaylist ?? SelectedPlaylist;
+            if (playlist == null) return;
 
             try
             {
-                if (Directory.Exists(SelectedPlaylist.FolderPath))
+                if (Directory.Exists(playlist.FolderPath))
                 {
-                    System.Diagnostics.Process.Start("explorer.exe", SelectedPlaylist.FolderPath);
+                    System.Diagnostics.Process.Start("explorer.exe", playlist.FolderPath);
                 }
             }
             catch (Exception ex)
             {
-                PlaylistStatusText = $"打开文件夹失败: {ex.Message}";
+                PlaylistStatusText = string.Format("打开文件夹失败: {0}", ex.Message);
             }
         }
 
@@ -1189,7 +1277,7 @@ namespace 网易云音乐下载.ViewModels
             {
                 if (SelectedPlaylist.SetCoverImage(dialog.FileName))
                 {
-                    PlaylistStatusText = $"歌单 \"{SelectedPlaylist.Name}\" 封面已更新";
+                    PlaylistStatusText = string.Format("歌单 \"{0}\" 封面已更新", SelectedPlaylist.Name);
                 }
                 else
                 {
@@ -1209,7 +1297,7 @@ namespace 网易云音乐下载.ViewModels
 
             if (SelectedPlaylist.RemoveCoverImage())
             {
-                PlaylistStatusText = $"歌单 \"{SelectedPlaylist.Name}\" 封面已恢复默认";
+                PlaylistStatusText = string.Format("歌单 \"{0}\" 封面已恢复默认", SelectedPlaylist.Name);
             }
         }
 
@@ -1246,11 +1334,12 @@ namespace 网易云音乐下载.ViewModels
                             _playlistsBasePath = newPath;
                             PlaylistsBaseDirectory = newPath;
                             SavePlaylistsBasePath(newPath);
+                            SavePlaylistStorageState();
                             PlaylistStatusText = "歌单存储目录已更改";
                         }
                         catch (Exception ex)
                         {
-                            PlaylistStatusText = $"更改目录失败: {ex.Message}";
+                            PlaylistStatusText = string.Format("更改目录失败: {0}", ex.Message);
                         }
                     }
                 }
@@ -1299,7 +1388,7 @@ namespace 网易云音乐下载.ViewModels
                 catch { }
             }
 
-            PlaylistStatusText = $"已添加 {addedCount} 首歌曲到歌单 \"{SelectedPlaylist.Name}\"";
+            PlaylistStatusText = string.Format("已添加 {0} 首歌曲到歌单 \"{1}\"", addedCount, SelectedPlaylist.Name);
             HideAddToPlaylistDialog();
         }
 
@@ -1314,16 +1403,18 @@ namespace 网易云音乐下载.ViewModels
 
             try
             {
-                string playlistName = NewPlaylistName.Trim();
-                string folderPath = Path.Combine(_playlistsBasePath, playlistName);
+                string inputText = NewPlaylistName.Trim();
+                string folderPath = ResolvePlaylistFolderPath(inputText);
+                string playlistName = Path.GetFileName(folderPath);
 
                 if (Directory.Exists(folderPath))
                 {
-                    MessageBox.Show($"歌单 \"{playlistName}\" 已存在。", "创建失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show(string.Format("歌单文件夹 \"{0}\" 已存在。", folderPath), "创建失败", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
                 Directory.CreateDirectory(folderPath);
+                PlaylistInfo.EnsureMarkerFile(folderPath);
 
                 var playlist = new PlaylistInfo
                 {
@@ -1362,32 +1453,36 @@ namespace 网易云音乐下载.ViewModels
 
                 Playlists.Add(playlist);
                 SelectedPlaylist = playlist;
-                PlaylistStatusText = $"已创建歌单 \"{playlistName}\" 并添加 {addedCount} 首歌曲";
+                SavePlaylistStorageState();
+                PlaylistStatusText = string.Format("已创建歌单 \"{0}\" 并添加 {1} 首歌曲", playlistName, addedCount);
                 HideAddToPlaylistDialog();
             }
             catch (Exception ex)
             {
-                PlaylistStatusText = $"创建歌单失败: {ex.Message}";
+                PlaylistStatusText = string.Format("创建歌单失败: {0}", ex.Message);
             }
         }
 
         private string LoadPlaylistsBasePath()
         {
-            // 可以从配置文件读取，这里使用默认路径
             string defaultPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "Playlists");
-            
-            // TODO: 从配置文件读取自定义路径
-            // string configPath = ConfigurationManager.AppSettings["PlaylistsBasePath"];
-            // if (!string.IsNullOrEmpty(configPath) && Directory.Exists(configPath))
-            //     return configPath;
-            
+
+            try
+            {
+                var state = LoadPlaylistStorageState();
+                if (!string.IsNullOrWhiteSpace(state.BaseDirectory))
+                {
+                    return state.BaseDirectory;
+                }
+            }
+            catch { }
+
             return defaultPath;
         }
 
         private void SavePlaylistsBasePath(string path)
         {
-            // TODO: 保存到配置文件
-            // ConfigurationManager.AppSettings["PlaylistsBasePath"] = path;
+            _playlistsBasePath = path;
         }
 
         private void MovePlaylistsToNewDirectory(string newPath)
@@ -1419,6 +1514,8 @@ namespace 网易云音乐下载.ViewModels
                     }
                 }
             }
+
+            SavePlaylistStorageState();
         }
 
         // 导入到现有歌单
@@ -1491,7 +1588,7 @@ namespace 网易云音乐下载.ViewModels
             string message = "请选择要导入的歌单：\n\n";
             for (int i = 0; i < playlistNames.Length; i++)
             {
-                message += $"{i + 1}. {playlistNames[i]}\n";
+                message += string.Format("{i + 1}. {playlistNames[i]}\n");
             }
             message += "\n请输入歌单名称或序号：";
 
@@ -1544,23 +1641,25 @@ namespace 网易云音乐下载.ViewModels
             _musicPlayerService.PlaybackStopped += (s, e) =>
             {
                 IsPlaying = false;
-                CurrentPosition = TimeSpan.Zero;
-                CurrentPositionSeconds = 0;
+                UpdatePlaybackPosition(TimeSpan.Zero);
             };
 
             _musicPlayerService.PlaybackCompleted += (s, e) =>
             {
                 IsPlaying = false;
-                CurrentPosition = TimeSpan.Zero;
-                CurrentPositionSeconds = 0;
+                UpdatePlaybackPosition(TimeSpan.Zero);
                 // 自动播放下一首
                 PlayNextSong();
             };
 
             _musicPlayerService.PositionChanged += (s, position) =>
             {
-                CurrentPosition = position;
-                CurrentPositionSeconds = position.TotalSeconds;
+                if (_isUserSeeking)
+                {
+                    return;
+                }
+
+                UpdatePlaybackPosition(position);
             };
 
             _musicPlayerService.DurationChanged += (s, duration) =>
@@ -1570,9 +1669,57 @@ namespace 网易云音乐下载.ViewModels
             };
         }
 
+        private void SelectSong(object param)
+        {
+            if (param is PlaylistSongInfo song)
+            {
+                SelectedSong = song;
+            }
+        }
+
+        private void CloseSelectedSongInfo()
+        {
+            SelectedSong = null;
+        }
+
+        private void CopySelectedSongInfo()
+        {
+            if (SelectedSong == null)
+            {
+                return;
+            }
+
+            string text = string.Format(
+                "歌曲标题: {0}\r\n歌手名称: {1}\r\n专辑名称: {2}\r\n播放时长: {3}\r\n文件大小: {4}\r\n文件名称: {5}\r\n文件路径: {6}",
+                SelectedSong.TitleDisplay,
+                SelectedSong.ArtistDisplay,
+                SelectedSong.AlbumDisplay,
+                SelectedSong.DurationText,
+                SelectedSong.FileSizeText,
+                SelectedSong.FileName,
+                SelectedSong.FilePath);
+
+            Clipboard.SetText(text);
+            PlaylistStatusText = "音频信息已复制到剪贴板";
+        }
+
         private bool CanPlaySong()
         {
             return SelectedPlaylist != null || PlaylistDetailPlaylist != null;
+        }
+
+        private void OpenPlaylistDetail(object param)
+        {
+            if (param is PlaylistInfo playlist)
+            {
+                // Load songs for the playlist
+                LoadSongsForPlaylist(playlist);
+                
+                // Switch to playlist detail view
+                SelectedTabIndex = 2;
+                IsPlaylistDetailView = true;
+                PlaylistDetailPlaylist = playlist;
+            }
         }
 
         private void PlaySong(object param)
@@ -1625,7 +1772,7 @@ namespace 网易云音乐下载.ViewModels
                 IsPlaylistDetailView = true;
                 // Reload songs to ensure latest data
                 LoadSongsForPlaylist(playlist);
-                PlaylistStatusText = $"打开歌单 \"{playlist.Name}\" - {playlist.Songs.Count} 首歌曲";
+                PlaylistStatusText = string.Format("已打开歌单 \"{0}\"", playlist.Name);
             }
         }
 
@@ -1650,8 +1797,8 @@ namespace 网易云音乐下载.ViewModels
 
             using (var dialog = new FormsFolderBrowserDialog())
             {
-                dialog.Description = $"选择歌单 \"{playlist.Name}\" 的新存储位置";
-                dialog.SelectedPath = playlist.FolderPath;
+                dialog.Description = string.Format("选择歌单 \"{0}\" 的新存储位置", playlist.Name);
+                dialog.SelectedPath = Path.GetDirectoryName(playlist.FolderPath);
 
                 if (dialog.ShowDialog() == FormsDialogResult.OK)
                 {
@@ -1662,18 +1809,26 @@ namespace 网易云音乐下载.ViewModels
                         string folderName = Path.GetFileName(playlist.FolderPath);
                         string newPath = Path.Combine(newDirectoryPath, folderName);
 
-                        // If the target folder already exists but is different, show error
-                        if (Directory.Exists(newPath) && newPath != playlist.FolderPath)
+                        if (string.Equals(
+                            Path.GetFullPath(newPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                            Path.GetFullPath(playlist.FolderPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                            StringComparison.OrdinalIgnoreCase))
                         {
-                            MessageBox.Show($"目标位置已存在同名歌单文件夹。\n请选择其他位置。", "更改目录失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            PlaylistStatusText = "歌单目录未变更";
                             return;
                         }
 
-                        // Move the folder
-                        Directory.Move(playlist.FolderPath, newPath);
+                        // If the target folder already exists but is different, show error
+                        if (Directory.Exists(newPath) && newPath != playlist.FolderPath)
+                        {
+                            MessageBox.Show(string.Format("目标位置已存在同名歌单文件夹。\n请选择其他位置。"), "更改目录失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            return;
+                        }
+
+                        // Move the folder (support cross-volume move)
+                        MoveDirectory(playlist.FolderPath, newPath);
 
                         // Update the playlist path
-                        string oldPath = playlist.FolderPath;
                         playlist.FolderPath = newPath;
 
                         // Update all song paths
@@ -1682,20 +1837,78 @@ namespace 网易云音乐下载.ViewModels
                             song.UpdateFolderPath(newPath);
                         }
 
+                        if (playlist.HasCustomCover)
+                        {
+                            playlist.CoverImagePath = Path.Combine(newPath, PlaylistInfo.CoverFileName);
+                        }
+
                         // Also update the selected playlist if it's the same
                         if (SelectedPlaylist == playlist)
                         {
                             SelectedPlaylist = playlist; // trigger refresh
                         }
 
-                        PlaylistStatusText = $"歌单 \"{playlist.Name}\" 目录已更改";
+                        SavePlaylistStorageState();
+                        PlaylistStatusText = string.Format("歌单 \"{0}\" 目录已更改", playlist.Name);
                     }
                     catch (Exception ex)
                     {
-                        PlaylistStatusText = $"更改目录失败: {ex.Message}";
-                        MessageBox.Show($"更改目录失败:\n{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                        PlaylistStatusText = string.Format("更改目录失败: {0}", ex.Message);
+                        MessageBox.Show(string.Format("更改目录失败:\n{0}", ex.Message), "错误", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
+            }
+        }
+
+        /// <summary>
+        /// 移动目录（支持跨卷移动）
+        /// </summary>
+        private void MoveDirectory(string sourcePath, string destinationPath)
+        {
+            string sourceRoot = Path.GetPathRoot(sourcePath);
+            string destinationRoot = Path.GetPathRoot(destinationPath);
+
+            if (!string.Equals(sourceRoot, destinationRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                CopyDirectory(sourcePath, destinationPath, true);
+                Directory.Delete(sourcePath, true);
+                return;
+            }
+
+            try
+            {
+                // Try normal move first (faster, same volume)
+                Directory.Move(sourcePath, destinationPath);
+            }
+            catch
+            {
+                CopyDirectory(sourcePath, destinationPath, true);
+                Directory.Delete(sourcePath, true);
+            }
+        }
+
+        /// <summary>
+        /// 复制目录
+        /// </summary>
+        private void CopyDirectory(string sourcePath, string destinationPath, bool overwrite)
+        {
+            // Create destination directory
+            Directory.CreateDirectory(destinationPath);
+
+            // Copy all files
+            foreach (var file in Directory.GetFiles(sourcePath))
+            {
+                string fileName = Path.GetFileName(file);
+                string destFile = Path.Combine(destinationPath, fileName);
+                File.Copy(file, destFile, overwrite);
+            }
+
+            // Copy all subdirectories
+            foreach (var dir in Directory.GetDirectories(sourcePath))
+            {
+                string dirName = Path.GetFileName(dir);
+                string destDir = Path.Combine(destinationPath, dirName);
+                CopyDirectory(dir, destDir, overwrite);
             }
         }
 
@@ -1703,6 +1916,310 @@ namespace 网易云音乐下载.ViewModels
         {
             IsPlaylistDetailView = false;
             PlaylistDetailPlaylist = null;
+        }
+
+        public void BeginSeek()
+        {
+            if (!CanSeekCurrentSong)
+            {
+                return;
+            }
+
+            _isUserSeeking = true;
+        }
+
+        public void CompleteSeek(double sliderValue)
+        {
+            if (!_isUserSeeking)
+            {
+                return;
+            }
+
+            _isUserSeeking = false;
+            SeekTo(sliderValue);
+        }
+
+        private void SeekTo(double seconds)
+        {
+            double clampedSeconds = ClampSeekSeconds(seconds);
+            var targetPosition = TimeSpan.FromSeconds(clampedSeconds);
+
+            UpdatePlaybackPosition(targetPosition);
+
+            if (_musicPlayerService != null)
+            {
+                _musicPlayerService.SetPosition(targetPosition);
+            }
+        }
+
+        private void UpdatePlaybackPosition(TimeSpan position)
+        {
+            _isSyncingPlaybackPosition = true;
+            try
+            {
+                CurrentPosition = position;
+                CurrentPositionSeconds = position.TotalSeconds;
+            }
+            finally
+            {
+                _isSyncingPlaybackPosition = false;
+            }
+        }
+
+        private double ClampSeekSeconds(double seconds)
+        {
+            double maxDuration = TotalDurationSeconds > 0 ? TotalDurationSeconds : Math.Max(0, seconds);
+            return Math.Max(0, Math.Min(seconds, maxDuration));
+        }
+
+        private string ResolvePlaylistFolderPath(string playlistInput)
+        {
+            if (string.IsNullOrWhiteSpace(playlistInput))
+            {
+                throw new InvalidOperationException("请输入歌单名称或完整文件夹路径。");
+            }
+
+            string folderPath = Path.IsPathRooted(playlistInput)
+                ? playlistInput
+                : Path.Combine(_playlistsBasePath, playlistInput);
+
+            folderPath = Path.GetFullPath(folderPath.Trim());
+            string playlistName = Path.GetFileName(folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            if (string.IsNullOrWhiteSpace(playlistName))
+            {
+                throw new InvalidOperationException("歌单路径无效，请重新输入。");
+            }
+
+            return folderPath;
+        }
+
+        private IEnumerable<string> GetKnownPlaylistDirectories()
+        {
+            var playlistDirectories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            try
+            {
+                // 1. 处理已保存的歌单路径
+                foreach (var storedPath in LoadPlaylistStorageState().PlaylistPaths)
+                {
+                    if (!string.IsNullOrWhiteSpace(storedPath) && Directory.Exists(storedPath))
+                    {
+                        string fullPath = Path.GetFullPath(storedPath);
+                        if (IsRecognizedPlaylistFolder(fullPath))
+                        {
+                            // 如果是旧标记，自动升级为新标记
+                            if (PlaylistInfo.HasLegacyMarkerFile(fullPath))
+                            {
+                                PlaylistInfo.EnsureMarkerFile(fullPath);
+                            }
+                            playlistDirectories.Add(fullPath);
+                        }
+                        else if (CanMigrateLegacyPlaylist(fullPath))
+                        {
+                            // 迁移逻辑：对于没有标记但看起来像歌单的目录，补上标记
+                            PlaylistInfo.EnsureMarkerFile(fullPath);
+                            playlistDirectories.Add(fullPath);
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            // 2. 扫描基础歌单目录
+            if (Directory.Exists(_playlistsBasePath))
+            {
+                foreach (var dir in Directory.GetDirectories(_playlistsBasePath))
+                {
+                    string fullPath = Path.GetFullPath(dir);
+                    if (IsRecognizedPlaylistFolder(fullPath))
+                    {
+                        // 基础目录下的也检查是否需要升级标记
+                        if (PlaylistInfo.HasLegacyMarkerFile(fullPath))
+                        {
+                            PlaylistInfo.EnsureMarkerFile(fullPath);
+                        }
+                        playlistDirectories.Add(fullPath);
+                    }
+                }
+            }
+
+            return playlistDirectories.OrderBy(path => path, StringComparer.OrdinalIgnoreCase);
+        }
+
+        private PlaylistStorageState LoadPlaylistStorageState()
+        {
+            try
+            {
+                if (File.Exists(_playlistStorageConfigPath))
+                {
+                    string json = File.ReadAllText(_playlistStorageConfigPath);
+                    var state = JsonSerializer.Deserialize<PlaylistStorageState>(json);
+                    if (state != null)
+                    {
+                        state.PlaylistPaths ??= new List<string>();
+                        return state;
+                    }
+                }
+            }
+            catch { }
+
+            return new PlaylistStorageState();
+        }
+
+        private void SavePlaylistStorageState()
+        {
+            try
+            {
+                string configDirectory = Path.GetDirectoryName(_playlistStorageConfigPath);
+                if (!string.IsNullOrEmpty(configDirectory))
+                {
+                    Directory.CreateDirectory(configDirectory);
+                }
+
+                var state = new PlaylistStorageState
+                {
+                    BaseDirectory = _playlistsBasePath,
+                    PlaylistPaths = Playlists
+                        .Select(p => p.FolderPath)
+                        .Where(path => !string.IsNullOrWhiteSpace(path))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+                        .ToList()
+                };
+
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                File.WriteAllText(_playlistStorageConfigPath, JsonSerializer.Serialize(state, options));
+            }
+            catch { }
+        }
+
+        private string GetPlaylistStorageConfigPath()
+        {
+            string configDirectory = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "网易云音乐下载");
+            return Path.Combine(configDirectory, "playlists.json");
+        }
+
+        private bool IsRecognizedPlaylistFolder(string folderPath)
+        {
+            if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+            {
+                return false;
+            }
+
+            // 1. 如果有有效的 V2 标记，直接认领（即使是空目录，也可能是刚创建的）
+            if (PlaylistInfo.HasValidMarkerFile(folderPath))
+            {
+                return true;
+            }
+
+            // 2. 如果是旧标记，必须目录结构像歌单（且包含音频文件）才认领
+            if (PlaylistInfo.HasLegacyMarkerFile(folderPath))
+            {
+                return HasValidPlaylistFolderStructure(folderPath, requireAudioFiles: true);
+            }
+
+            return false;
+        }
+
+        private bool CanMigrateLegacyPlaylist(string folderPath)
+        {
+            if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+            {
+                return false;
+            }
+
+            // 如果已经有标记了，就不走迁移逻辑（由 IsRecognizedPlaylistFolder 处理）
+            if (PlaylistInfo.HasMarkerFile(folderPath))
+            {
+                return false;
+            }
+
+            // 如果在默认歌单目录下，通常由扫描逻辑处理
+            if (IsPathUnderDirectory(folderPath, _playlistsBasePath))
+            {
+                return false;
+            }
+
+            // 只有当目录结构非常像歌单（且有音频文件）时才允许迁移
+            return HasValidPlaylistFolderStructure(folderPath, requireAudioFiles: true);
+        }
+
+        private bool HasValidPlaylistFolderStructure(string folderPath, bool requireAudioFiles = false)
+        {
+            try
+            {
+                // 不允许有子目录
+                if (Directory.GetDirectories(folderPath).Length > 0)
+                {
+                    return false;
+                }
+
+                var files = Directory.GetFiles(folderPath);
+                bool hasAudio = false;
+
+                foreach (var filePath in files)
+                {
+                    string fileName = Path.GetFileName(filePath);
+                    // 忽略标记文件和封面文件
+                    if (string.Equals(fileName, PlaylistInfo.MarkerFileName, StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(fileName, PlaylistInfo.CoverFileName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    string extension = Path.GetExtension(filePath);
+                    if (!IsPlaylistAudioExtension(extension))
+                    {
+                        // 包含非音频文件（且不是标记/封面），认为不是纯粹的歌单目录
+                        return false;
+                    }
+                    hasAudio = true;
+                }
+
+                return !requireAudioFiles || hasAudio;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private bool IsPlaylistAudioExtension(string extension)
+        {
+            return string.Equals(extension, ".mp3", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(extension, ".flac", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(extension, ".wav", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(extension, ".ncm", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private bool IsPathUnderDirectory(string path, string directoryPath)
+        {
+            if (string.IsNullOrWhiteSpace(path) || string.IsNullOrWhiteSpace(directoryPath))
+            {
+                return false;
+            }
+
+            string normalizedPath = Path.GetFullPath(path)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            string normalizedDirectory = Path.GetFullPath(directoryPath)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+            if (string.Equals(normalizedPath, normalizedDirectory, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            string directoryWithSeparator = normalizedDirectory + Path.DirectorySeparatorChar;
+            return normalizedPath.StartsWith(directoryWithSeparator, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private sealed class PlaylistStorageState
+        {
+            public string BaseDirectory { get; set; } = string.Empty;
+
+            public List<string> PlaylistPaths { get; set; } = new List<string>();
         }
 
         private bool CanPlayPreviousSong()

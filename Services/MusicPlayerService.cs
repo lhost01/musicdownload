@@ -55,7 +55,7 @@ namespace 网易云音乐下载.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"播放失败: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine(string.Format("播放失败: {0}", ex.Message));
             }
         }
 

@@ -1,11 +1,33 @@
 # MusicBox - 网易云音乐工具
 
+## 📋 更新日志
+
+### 2026.04.19 更新
+
+#### 歌单识别逻辑升级
+
+- 新增更严格的歌单识别机制，避免把无关目录误识别为歌单
+- 仅识别程序歌单标记，并结合目录结构判断是否为真实歌单
+- 旧数据只会在明显像真实歌单时迁移，减少历史脏路径干扰
+
+#### 界面与交互优化
+
+- 更新了导航栏 UI，整体层次和视觉风格更统一
+- 修复了播放进度条不同步、无法拖动的问题
+
+#### 更新日志提示
+
+- 新增"下次不再提示"选项，勾选后本次更新日志将不再自动弹出
+- 后续如果有新的更新日志版本，仍会继续提醒
+
+***
+
 <p align="center">
   <img src="favicon.ico" width="128" height="128" alt="MusicBox Logo">
 </p>
 
 <p align="center">
-  <a href="#"><img src="https://img.shields.io/badge/.NET%20Framework-4.7.2-blue?style=flat-square&logo=.net" alt=".NET Framework"></a>
+  <a href="#"><img src="https://img.shields.io/badge/.NET-9.0-blue?style=flat-square&logo=.net" alt=".NET 9.0"></a>
   <a href="#"><img src="https://img.shields.io/badge/WPF-Application-orange?style=flat-square&logo=windows" alt="WPF"></a>
   <a href="#"><img src="https://img.shields.io/badge/MVVM-Architecture-green?style=flat-square" alt="MVVM"></a>
   <a href="#"><img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="License"></a>
@@ -16,11 +38,12 @@
   <i>采用 macOS 风格设计，支持歌单管理和音乐播放</i>
 </p>
 
----
+***
 
 ## ✨ 功能特性
 
 ### 🎵 音乐播放
+
 - **内置音乐播放器**：支持 MP3、FLAC、WAV 格式播放
 - **播放控制**：播放/暂停、上一首、下一首
 - **进度条拖动**：可自由拖动调整播放位置
@@ -28,6 +51,7 @@
 - **实时进度**：200ms 刷新频率，流畅跟随播放进度
 
 ### 📁 歌单管理
+
 - **创建歌单**：支持自定义名称和封面
 - **歌单详情页**：在程序内打开歌单，显示完整歌曲列表
 - **歌曲信息显示**：显示歌曲名、艺术家、专辑、时长、文件大小
@@ -36,6 +60,7 @@
 - **删除歌曲**：支持从歌单中删除歌曲文件
 
 ### 🔄 NCM 文件解密转换
+
 - **单文件模式**：选择单个 NCM 文件进行解密
 - **批量文件夹模式**：扫描整个文件夹中的所有 NCM 文件
 - **多文件选择模式**：同时选择多个 NCM 文件
@@ -44,11 +69,13 @@
 - **导入歌单**：转换完成后可直接导入到现有或新建歌单
 
 ### ⬇️ 音乐下载功能
+
 - **ID 下载**：通过网易云音乐 ID 下载歌曲
 - **批量下载**：支持多任务同时下载
 - **实时进度**：显示下载进度和状态
 
 ### 🎨 精美 UI 设计
+
 - **macOS 风格**：无边框窗口、红黄绿控制按钮
 - **圆角设计**：现代化的圆角卡片和按钮
 - **毛玻璃效果**：半透明背景和柔和阴影
@@ -59,30 +86,34 @@
   - 页面切换效果
 - **响应式布局**：自适应窗口大小
 
----
+***
 
 ## 📸 界面预览
 
 ### 主界面
+
 - 左侧导航栏：NCM 转换、ID 下载、我的歌单
 - macOS 风格标题栏：红黄绿三色控制按钮
 - 卡片式内容区域：清晰的功能分区
 
 ### 歌单详情页
+
 - 顶部导航：返回按钮、歌单标题、操作按钮
 - 歌曲列表：显示完整歌曲信息
 - 播放按钮：每首歌旁都有播放按钮
 
 ### 音乐播放器
+
 - 固定在底部
 - 显示当前播放歌曲信息
 - 播放控制按钮和进度条
 
----
+***
 
 ## 🛠️ 技术架构
 
 ### 项目结构
+
 ```
 网易云音乐下载/
 ├── Commands/
@@ -116,6 +147,7 @@
 ```
 
 ### 核心技术
+
 - **框架**：.NET Framework 4.7.2
 - **UI 框架**：WPF (Windows Presentation Foundation)
 - **设计模式**：MVVM (Model-View-ViewModel)
@@ -127,6 +159,7 @@
 - **异步编程**：async/await + CancellationToken
 
 ### NCM 解密原理
+
 1. **文件头验证**：检查 "CTENFDAM" 魔数
 2. **密钥解密**：
    - XOR 0x64 预处理
@@ -135,7 +168,7 @@
 3. **音频解密**：使用网易云变种 RC4 算法
 4. **元数据提取**：解析 JSON 格式的歌曲信息
 
----
+***
 
 ## 📋 系统要求
 
@@ -143,7 +176,7 @@
 - .NET Framework 4.7.2 或更高版本
 - Visual Studio 2019 或更高版本（用于开发）
 
----
+***
 
 ## 🚀 使用方法
 
@@ -180,20 +213,20 @@
 2. 输入网易云音乐歌曲 ID
 3. 点击"开始下载"
 
----
+***
 
 ## 🔧 编译说明
 
 ### 使用 Visual Studio
 
 1. 克隆仓库
+
 ```bash
 git clone https://github.com/lhost01/musicdownload.git
 ```
 
-2. 使用 Visual Studio 2019+ 打开 `网易云音乐下载.sln`
-
-3. 按 `F5` 或点击"开始调试"
+1. 使用 Visual Studio 2019+ 打开 `网易云音乐下载.sln`
+2. 按 `F5` 或点击"开始调试"
 
 ### 使用命令行
 
@@ -206,15 +239,17 @@ msbuild 网易云音乐下载.sln /p:Configuration=Release /p:Platform="Any CPU"
 ```
 
 编译完成后，可执行文件位于：
+
 ```
 bin\Release\网易云音乐下载.exe
 ```
 
----
+***
 
 ## 📁 文件格式说明
 
 ### NCM 文件结构
+
 ```
 [8 字节] 魔数 "CTENFDAM"
 [2 字节] 版本号
@@ -226,7 +261,7 @@ bin\Release\网易云音乐下载.exe
 [剩余] 加密音频数据
 ```
 
----
+***
 
 ## 🤝 贡献指南
 
@@ -238,7 +273,7 @@ bin\Release\网易云音乐下载.exe
 4. 推送到分支 (`git push origin feature/AmazingFeature`)
 5. 打开一个 Pull Request
 
----
+***
 
 ## ⚠️ 免责声明
 
@@ -246,7 +281,7 @@ bin\Release\网易云音乐下载.exe
 
 本项目与网易云音乐官方无关，仅为第三方工具。
 
----
+***
 
 ## 📄 许可证
 
@@ -276,15 +311,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
----
+***
 
 ## 🙏 致谢
 
-- 感谢 [ncmdump](https://github.com/anonymous5l/ncmdump) 项目的启发
 - 感谢网易云音乐提供的音乐服务
 - 感谢所有贡献者和用户的支持
 
----
+***
 
 <p align="center">
   <b>Made with ❤️ by MusicBox Team</b>
