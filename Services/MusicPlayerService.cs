@@ -1,156 +1,175 @@
-using System;
-using System.Windows.Media;
-using System.Windows.Threading;
+using Avalonia.Threading;
+using NAudio.Wave;
 
-namespace 网易云音乐下载.Services
+namespace Musicbox.Services;
+
+public sealed class MusicPlayerService : IDisposable
 {
-    /// <summary>
-    /// 音乐播放器服务
-    /// </summary>
-    public class MusicPlayerService
+    private readonly DispatcherTimer _positionTimer;
+    private WaveOutEvent? _outputDevice;
+    private AudioFileReader? _audioFile;
+    private bool _stopRequested;
+    private float _volume = 0.75f;
+
+    public bool IsPlaying { get; private set; }
+
+    public bool IsPaused { get; private set; }
+
+    public TimeSpan CurrentPosition => _audioFile?.CurrentTime ?? TimeSpan.Zero;
+
+    public TimeSpan TotalDuration => _audioFile?.TotalTime ?? TimeSpan.Zero;
+
+    public event EventHandler? PlaybackStarted;
+
+    public event EventHandler? PlaybackPaused;
+
+    public event EventHandler? PlaybackStopped;
+
+    public event EventHandler? PlaybackCompleted;
+
+    public event EventHandler<TimeSpan>? PositionChanged;
+
+    public event EventHandler<TimeSpan>? DurationChanged;
+
+    public MusicPlayerService()
     {
-        private MediaPlayer _mediaPlayer;
-        private DispatcherTimer _positionTimer;
-
-        public bool IsPlaying { get; private set; }
-        public bool IsPaused { get; private set; }
-        public TimeSpan CurrentPosition { get { return _mediaPlayer?.Position ?? TimeSpan.Zero; } }
-        public TimeSpan TotalDuration { get; private set; }
-        public double Volume { get { return _mediaPlayer?.Volume ?? 0.5; } set { if (_mediaPlayer != null) _mediaPlayer.Volume = value; } }
-
-        public event EventHandler PlaybackStarted;
-        public event EventHandler PlaybackPaused;
-        public event EventHandler PlaybackStopped;
-        public event EventHandler PlaybackCompleted;
-        public event EventHandler<TimeSpan> PositionChanged;
-        public event EventHandler<TimeSpan> DurationChanged;
-
-        public MusicPlayerService()
+        _positionTimer = new DispatcherTimer
         {
-            _mediaPlayer = new MediaPlayer();
-            _mediaPlayer.MediaEnded += OnMediaEnded;
-            _mediaPlayer.MediaOpened += OnMediaOpened;
+            Interval = TimeSpan.FromMilliseconds(200)
+        };
+        _positionTimer.Tick += (_, _) => PositionChanged?.Invoke(this, CurrentPosition);
+    }
 
-            _positionTimer = new DispatcherTimer();
-            _positionTimer.Interval = TimeSpan.FromMilliseconds(200);
-            _positionTimer.Tick += OnPositionTimerTick;
+    public void Play(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+        {
+            return;
         }
 
-        /// <summary>
-        /// 播放指定文件
-        /// </summary>
-        public void Play(string filePath)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(filePath))
-                    return;
+        StopInternal(false);
 
-                _mediaPlayer.Open(new Uri(filePath));
-                _mediaPlayer.Play();
-                IsPlaying = true;
-                IsPaused = false;
-                _positionTimer.Start();
-                PlaybackStarted?.Invoke(this, EventArgs.Empty);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine(string.Format("播放失败: {0}", ex.Message));
-            }
+        _audioFile = new AudioFileReader(filePath);
+        _outputDevice = new WaveOutEvent();
+        _outputDevice.PlaybackStopped += OutputDeviceOnPlaybackStopped;
+        _outputDevice.Init(_audioFile);
+        _audioFile.Volume = _volume;
+        _outputDevice.Play();
+
+        IsPlaying = true;
+        IsPaused = false;
+        _stopRequested = false;
+        _positionTimer.Start();
+        DurationChanged?.Invoke(this, TotalDuration);
+        PlaybackStarted?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void Pause()
+    {
+        if (_outputDevice is null || !IsPlaying || IsPaused)
+        {
+            return;
         }
 
-        /// <summary>
-        /// 暂停播放
-        /// </summary>
-        public void Pause()
+        _outputDevice.Pause();
+        IsPaused = true;
+        _positionTimer.Stop();
+        PlaybackPaused?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void Resume()
+    {
+        if (_outputDevice is null || !IsPlaying || !IsPaused)
         {
-            if (IsPlaying && !IsPaused)
-            {
-                _mediaPlayer.Pause();
-                IsPaused = true;
-                _positionTimer.Stop();
-                PlaybackPaused?.Invoke(this, EventArgs.Empty);
-            }
+            return;
         }
 
-        /// <summary>
-        /// 继续播放
-        /// </summary>
-        public void Resume()
+        _outputDevice.Play();
+        IsPaused = false;
+        _positionTimer.Start();
+        PlaybackStarted?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void Stop()
+    {
+        StopInternal(true);
+    }
+
+    public void SetPosition(TimeSpan position)
+    {
+        if (_audioFile is null)
         {
-            if (IsPlaying && IsPaused)
-            {
-                _mediaPlayer.Play();
-                IsPaused = false;
-                _positionTimer.Start();
-                PlaybackStarted?.Invoke(this, EventArgs.Empty);
-            }
+            return;
         }
 
-        /// <summary>
-        /// 停止播放
-        /// </summary>
-        public void Stop()
-        {
-            _mediaPlayer.Stop();
-            IsPlaying = false;
-            IsPaused = false;
-            _positionTimer.Stop();
-            PlaybackStopped?.Invoke(this, EventArgs.Empty);
-        }
+        var clamped = position < TimeSpan.Zero
+            ? TimeSpan.Zero
+            : position > _audioFile.TotalTime
+                ? _audioFile.TotalTime
+                : position;
 
-        /// <summary>
-        /// 设置播放位置
-        /// </summary>
-        public void SetPosition(TimeSpan position)
-        {
-            if (_mediaPlayer != null && position <= TotalDuration)
-            {
-                _mediaPlayer.Position = position;
-            }
-        }
+        _audioFile.CurrentTime = clamped;
+        PositionChanged?.Invoke(this, clamped);
+    }
 
-        /// <summary>
-        /// 设置音量 (0.0 - 1.0)
-        /// </summary>
-        public void SetVolume(double volume)
+    public void SetVolume(double value)
+    {
+        if (_audioFile is not null)
         {
-            if (_mediaPlayer != null)
-            {
-                _mediaPlayer.Volume = Math.Max(0, Math.Min(1, volume));
-            }
+            _volume = (float)Math.Clamp(value, 0, 1);
+            _audioFile.Volume = _volume;
         }
-
-        private void OnMediaOpened(object sender, EventArgs e)
+        else
         {
-            if (_mediaPlayer.NaturalDuration.HasTimeSpan)
-            {
-                TotalDuration = _mediaPlayer.NaturalDuration.TimeSpan;
-                DurationChanged?.Invoke(this, TotalDuration);
-            }
+            _volume = (float)Math.Clamp(value, 0, 1);
         }
+    }
 
-        private void OnMediaEnded(object sender, EventArgs e)
+    private void OutputDeviceOnPlaybackStopped(object? sender, StoppedEventArgs e)
+    {
+        _positionTimer.Stop();
+        var completed = !_stopRequested && _audioFile is not null && _audioFile.Position >= _audioFile.Length;
+        IsPlaying = false;
+        IsPaused = false;
+
+        if (completed)
         {
-            IsPlaying = false;
-            IsPaused = false;
-            _positionTimer.Stop();
             PlaybackCompleted?.Invoke(this, EventArgs.Empty);
         }
-
-        private void OnPositionTimerTick(object sender, EventArgs e)
+        else
         {
-            PositionChanged?.Invoke(this, _mediaPlayer.Position);
+            PlaybackStopped?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private void StopInternal(bool raiseStopped)
+    {
+        _stopRequested = true;
+        _positionTimer.Stop();
+
+        if (_outputDevice is not null)
+        {
+            _outputDevice.PlaybackStopped -= OutputDeviceOnPlaybackStopped;
+            _outputDevice.Stop();
+            _outputDevice.Dispose();
+            _outputDevice = null;
         }
 
-        /// <summary>
-        /// 释放资源
-        /// </summary>
-        public void Dispose()
+        _audioFile?.Dispose();
+        _audioFile = null;
+
+        var wasPlaying = IsPlaying || IsPaused;
+        IsPlaying = false;
+        IsPaused = false;
+
+        if (raiseStopped && wasPlaying)
         {
-            _positionTimer?.Stop();
-            _mediaPlayer?.Stop();
-            _mediaPlayer?.Close();
+            PlaybackStopped?.Invoke(this, EventArgs.Empty);
         }
+    }
+
+    public void Dispose()
+    {
+        StopInternal(false);
     }
 }

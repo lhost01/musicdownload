@@ -1,294 +1,300 @@
-﻿using System;
+using CommunityToolkit.Mvvm.ComponentModel;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.IO;
-using System.Linq;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Avalonia.Media.Imaging;
+using Musicbox.Helpers;
 
-namespace 网易云音乐下载.Models
+namespace Musicbox.Models;
+
+public partial class PlaylistInfo : ObservableObject
 {
-    /// <summary>
-    /// 歌单信息
-    /// </summary>
-    public class PlaylistInfo : INotifyPropertyChanged
+    private const string MarkerType = "musicbox-playlist";
+    private static readonly string[] SupportedCoverExtensions = [".jpg", ".jpeg", ".png", ".bmp", ".webp"];
+    public const string MarkerFileName = "musicbox.playlist.json";
+    public const string LegacyMarkerFileName = ".musicbox.playlist";
+    public const string CoverFileName = "cover.jpg";
+    public const string CoverFileBaseName = "cover";
+
+    [ObservableProperty]
+    private string name = string.Empty;
+
+    [ObservableProperty]
+    private string folderPath = string.Empty;
+
+    [ObservableProperty]
+    private string coverImagePath = string.Empty;
+
+    [ObservableProperty]
+    private Bitmap? coverBitmap;
+
+    [ObservableProperty]
+    private DateTime createdTime = DateTime.Now;
+
+    public ObservableCollection<PlaylistSongInfo> Songs { get; } = [];
+
+    public int SongCount => Songs.Count;
+
+    public string SongCountText => $"{SongCount} 首歌曲";
+
+    public string CreatedTimeText => CreatedTime.ToString("yyyy-MM-dd HH:mm");
+
+    public bool HasCustomCover => !string.IsNullOrWhiteSpace(CoverImagePath) && File.Exists(CoverImagePath);
+
+    public void AddSong(PlaylistSongInfo song)
     {
-        private string _name;
-        private string _folderPath;
-        private DateTime _createdTime;
-        private ObservableCollection<PlaylistSongInfo> _songs;
-        private string _coverImagePath;
-        private bool _isSelected;
-
-        /// <summary>
-        /// 歌单名称
-        /// </summary>
-        public string Name
+        if (Songs.Any(existing => string.Equals(existing.FilePath, song.FilePath, StringComparison.OrdinalIgnoreCase)))
         {
-            get { return _name; }
-            set
+            return;
+        }
+
+        Songs.Add(song);
+        RaiseSongMetaChanged();
+    }
+
+    public void RemoveSong(PlaylistSongInfo song)
+    {
+        Songs.Remove(song);
+        RaiseSongMetaChanged();
+    }
+
+    public void ReloadSongs()
+    {
+        Songs.Clear();
+        if (!Directory.Exists(FolderPath))
+        {
+            RaiseSongMetaChanged();
+            return;
+        }
+
+        foreach (var file in Directory.GetFiles(FolderPath)
+            .Where(path => IsAudioFile(Path.GetExtension(path)))
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+        {
+            var song = PlaylistSongInfo.FromFilePath(file);
+            if (song is not null)
             {
-                _name = value;
-                OnPropertyChanged(nameof(Name));
+                Songs.Add(song);
             }
         }
 
-        /// <summary>
-        /// 歌单文件夹路径
-        /// </summary>
-        public string FolderPath
+        CoverImagePath = ResolveCoverImagePath(FolderPath) ?? string.Empty;
+        RaiseSongMetaChanged();
+    }
+
+    public static bool IsPlaylistFolder(string folderPath)
+    {
+        if (!Directory.Exists(folderPath))
         {
-            get { return _folderPath; }
-            set
+            return false;
+        }
+
+        var markerPath = Path.Combine(folderPath, MarkerFileName);
+        if (TryReadMarkerMetadata(markerPath, out _))
+        {
+            return true;
+        }
+
+        var legacyMarkerPath = Path.Combine(folderPath, LegacyMarkerFileName);
+        return TryReadLegacyMarker(legacyMarkerPath);
+    }
+
+    public static bool TryEnsureMarker(string folderPath, out string? errorMessage)
+    {
+        errorMessage = null;
+
+        try
+        {
+            Directory.CreateDirectory(folderPath);
+
+            var markerPath = Path.Combine(folderPath, MarkerFileName);
+            var existingCreatedAt = TryReadMarkerMetadata(markerPath, out var existingMetadata)
+                ? existingMetadata!.CreatedAt
+                : DateTime.Now;
+
+            var markerPayload = JsonSerializer.Serialize(new PlaylistMarkerMetadata
             {
-                _folderPath = value;
-                OnPropertyChanged(nameof(FolderPath));
-            }
-        }
-
-        /// <summary>
-        /// 创建时间
-        /// </summary>
-        public DateTime CreatedTime
-        {
-            get { return _createdTime; }
-            set
+                Type = MarkerType,
+                Version = 2,
+                Name = Path.GetFileName(folderPath),
+                CreatedAt = existingCreatedAt
+            }, new JsonSerializerOptions
             {
-                _createdTime = value;
-                OnPropertyChanged(nameof(CreatedTime));
-            }
-        }
+                WriteIndented = true
+            });
 
-        /// <summary>
-        /// 歌曲列表
-        /// </summary>
-        public ObservableCollection<PlaylistSongInfo> Songs
-        {
-            get { return _songs; }
-            set
-            {
-                _songs = value;
-                OnPropertyChanged(nameof(Songs));
-                OnPropertyChanged(nameof(SongCount));
-                OnPropertyChanged(nameof(SongCountText));
-            }
-        }
+            File.WriteAllText(markerPath, markerPayload);
 
-        /// <summary>
-        /// 封面图片路径
-        /// </summary>
-        public string CoverImagePath
-        {
-            get { return _coverImagePath; }
-            set
-            {
-                _coverImagePath = value;
-                OnPropertyChanged(nameof(CoverImagePath));
-                OnPropertyChanged(nameof(CoverImage));
-                OnPropertyChanged(nameof(HasCustomCover));
-            }
-        }
-
-        /// <summary>
-        /// 是否选中
-        /// </summary>
-        public bool IsSelected
-        {
-            get { return _isSelected; }
-            set
-            {
-                _isSelected = value;
-                OnPropertyChanged(nameof(IsSelected));
-            }
-        }
-
-        /// <summary>
-        /// 封面图片
-        /// </summary>
-        public ImageSource CoverImage
-        {
-            get
-            {
-                try
-                {
-                    if (!string.IsNullOrEmpty(CoverImagePath) && File.Exists(CoverImagePath))
-                    {
-                        var bitmap = new BitmapImage();
-                        bitmap.BeginInit();
-                        bitmap.CacheOption = BitmapCacheOption.OnLoad;
-                        bitmap.UriSource = new Uri(CoverImagePath);
-                        bitmap.EndInit();
-                        return bitmap;
-                    }
-                }
-                catch { }
-                return null;
-            }
-        }
-
-        /// <summary>
-        /// 是否有自定义封面
-        /// </summary>
-        public bool HasCustomCover
-        {
-            get { return !string.IsNullOrEmpty(CoverImagePath) && File.Exists(CoverImagePath); }
-        }
-
-        /// <summary>
-        /// 歌曲数量
-        /// </summary>
-        public int SongCount
-        {
-            get { return Songs?.Count ?? 0; }
-        }
-
-        /// <summary>
-        /// 歌曲数量文本
-        /// </summary>
-        public string SongCountText
-        {
-            get { return string.Format("{0} 首歌曲", SongCount); }
-        }
-
-        /// <summary>
-        /// 创建时间文本
-        /// </summary>
-        public string CreatedTimeText
-        {
-            get { return CreatedTime.ToString("yyyy-MM-dd HH:mm"); }
-        }
-
-        /// <summary>
-        /// 封面文件名
-        /// </summary>
-        public const string CoverFileName = "cover.jpg";
-
-        public PlaylistInfo()
-        {
-            Songs = new ObservableCollection<PlaylistSongInfo>();
-            CreatedTime = DateTime.Now;
-        }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected virtual void OnPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-
-        /// <summary>
-        /// 添加歌曲到歌单
-        /// </summary>
-        public void AddSong(PlaylistSongInfo song)
-        {
-            if (Songs.Any(s => s.FilePath == song.FilePath))
-                return;
-
-            Songs.Add(song);
-            OnPropertyChanged(nameof(SongCount));
-            OnPropertyChanged(nameof(SongCountText));
-        }
-
-        /// <summary>
-        /// 从歌单移除歌曲
-        /// </summary>
-        public void RemoveSong(PlaylistSongInfo song)
-        {
-            Songs.Remove(song);
-            OnPropertyChanged(nameof(SongCount));
-            OnPropertyChanged(nameof(SongCountText));
-        }
-
-        /// <summary>
-        /// 重命名歌单（同时重命名文件夹）
-        /// </summary>
-        public bool Rename(string newName, string parentDirectory)
-        {
             try
             {
-                if (string.IsNullOrWhiteSpace(newName) || newName == Name)
-                    return false;
-
-                string newFolderPath = Path.Combine(parentDirectory, newName);
-                if (Directory.Exists(newFolderPath))
-                    return false;
-
-                Directory.Move(FolderPath, newFolderPath);
-                Name = newName;
-                FolderPath = newFolderPath;
-
-                // 更新所有歌曲的文件路径
-                foreach (var song in Songs)
-                {
-                    song.UpdateFolderPath(newFolderPath);
-                }
-
-                // 更新封面路径
-                if (HasCustomCover)
-                {
-                    CoverImagePath = Path.Combine(newFolderPath, CoverFileName);
-                }
-
-                return true;
+                var attributes = File.GetAttributes(markerPath);
+                File.SetAttributes(markerPath, attributes | FileAttributes.Hidden);
             }
             catch
             {
-                return false;
+                // 某些环境可能不支持隐藏属性，保持标记文件可读写即可。
+            }
+
+            var legacyMarkerPath = Path.Combine(folderPath, LegacyMarkerFileName);
+            if (File.Exists(legacyMarkerPath))
+            {
+                File.Delete(legacyMarkerPath);
+            }
+
+            return true;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            errorMessage = $"没有权限在 `{folderPath}` 写入歌单标记文件";
+            return false;
+        }
+        catch (IOException)
+        {
+            errorMessage = $"无法在 `{folderPath}` 写入歌单标记文件";
+            return false;
+        }
+        catch
+        {
+            errorMessage = $"写入 `{folderPath}` 的歌单标记文件时发生异常";
+            return false;
+        }
+    }
+
+    public static bool IsAudioFile(string extension)
+    {
+        return extension.Equals(".mp3", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".wav", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".flac", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".ncm", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static string? ResolveCoverImagePath(string folderPath)
+    {
+        if (!Directory.Exists(folderPath))
+        {
+            return null;
+        }
+
+        var legacyPath = Path.Combine(folderPath, CoverFileName);
+        if (File.Exists(legacyPath))
+        {
+            return legacyPath;
+        }
+
+        foreach (var extension in SupportedCoverExtensions)
+        {
+            var path = Path.Combine(folderPath, $"{CoverFileBaseName}{extension}");
+            if (File.Exists(path))
+            {
+                return path;
             }
         }
 
-        /// <summary>
-        /// 设置封面图片
-        /// </summary>
-        public bool SetCoverImage(string sourceImagePath)
-        {
-            try
-            {
-                if (!File.Exists(sourceImagePath))
-                    return false;
+        return null;
+    }
 
-                string destPath = Path.Combine(FolderPath, CoverFileName);
-                File.Copy(sourceImagePath, destPath, true);
-                CoverImagePath = destPath;
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
+    public static void DeleteExistingCoverFiles(string folderPath)
+    {
+        if (!Directory.Exists(folderPath))
+        {
+            return;
         }
 
-        /// <summary>
-        /// 删除封面图片
-        /// </summary>
-        public bool RemoveCoverImage()
+        var candidates = SupportedCoverExtensions
+            .Select(extension => Path.Combine(folderPath, $"{CoverFileBaseName}{extension}"))
+            .Append(Path.Combine(folderPath, CoverFileName))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var path in candidates)
         {
-            try
+            if (File.Exists(path))
             {
-                if (HasCustomCover)
-                {
-                    File.Delete(CoverImagePath);
-                    CoverImagePath = null;
-                    return true;
-                }
-                return false;
-            }
-            catch
-            {
-                return false;
+                File.Delete(path);
             }
         }
+    }
 
-        /// <summary>
-        /// 检查并加载封面
-        /// </summary>
-        public void CheckAndLoadCover()
+    partial void OnCoverImagePathChanged(string value)
+    {
+        CoverBitmap = ImageSourceHelper.LoadBitmap(value);
+        OnPropertyChanged(nameof(HasCustomCover));
+    }
+
+    private void RaiseSongMetaChanged()
+    {
+        OnPropertyChanged(nameof(SongCount));
+        OnPropertyChanged(nameof(SongCountText));
+        OnPropertyChanged(nameof(HasCustomCover));
+    }
+
+    private static bool TryReadMarkerMetadata(string markerPath, out PlaylistMarkerMetadata? metadata)
+    {
+        metadata = null;
+        if (!File.Exists(markerPath))
         {
-            string coverPath = Path.Combine(FolderPath, CoverFileName);
-            if (File.Exists(coverPath))
+            return false;
+        }
+
+        try
+        {
+            metadata = JsonSerializer.Deserialize<PlaylistMarkerMetadata>(File.ReadAllText(markerPath));
+            return metadata is not null &&
+                   string.Equals(metadata.Type, MarkerType, StringComparison.OrdinalIgnoreCase) &&
+                   metadata.Version >= 1;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool TryReadLegacyMarker(string markerPath)
+    {
+        if (!File.Exists(markerPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            return string.Equals(
+                File.ReadAllText(markerPath).Trim(),
+                MarkerType,
+                StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private sealed class PlaylistMarkerMetadata
+    {
+        public string Type { get; init; } = string.Empty;
+
+        public int Version { get; init; }
+
+        public string Name { get; init; } = string.Empty;
+
+        [JsonConverter(typeof(NullableDateTimeJsonConverter))]
+        public DateTime CreatedAt { get; init; }
+    }
+
+    private sealed class NullableDateTimeJsonConverter : JsonConverter<DateTime>
+    {
+        public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            if (reader.TokenType == JsonTokenType.String && reader.TryGetDateTime(out var dateTime))
             {
-                CoverImagePath = coverPath;
+                return dateTime;
             }
+
+            return DateTime.Now;
+        }
+
+        public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
+        {
+            writer.WriteStringValue(value);
         }
     }
 }

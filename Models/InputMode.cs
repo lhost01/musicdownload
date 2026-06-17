@@ -1,12 +1,8 @@
-namespace 网易云音乐下载.Models
+namespace Musicbox.Models;
+
+public enum InputMode
 {
-    /// <summary>
-    /// 输入模式枚举
-    /// </summary>
-    public enum InputMode
-    {
-        SingleFile,
-        BatchFolder,
-        MultipleFiles
-    }
+    SingleFile,
+    BatchFolder,
+    MultipleFiles
 }

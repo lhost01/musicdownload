@@ -1,313 +1,75 @@
-using System;
-using System.ComponentModel;
-using System.IO;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using TagLib;
 
-namespace 网易云音乐下载.Models
+namespace Musicbox.Models;
+
+public sealed class PlaylistSongInfo
 {
-    /// <summary>
-    /// 歌单中的歌曲信息
-    /// </summary>
-    public class PlaylistSongInfo : INotifyPropertyChanged
+    public string FileName { get; init; } = string.Empty;
+
+    public string FilePath { get; set; } = string.Empty;
+
+    public string Title { get; init; } = string.Empty;
+
+    public string Artist { get; init; } = string.Empty;
+
+    public string Album { get; init; } = string.Empty;
+
+    public long FileSize { get; init; }
+
+    public TimeSpan Duration { get; init; }
+
+    public string DisplayName =>
+        !string.IsNullOrWhiteSpace(Title)
+            ? string.IsNullOrWhiteSpace(Artist) ? Title : $"{Title} - {Artist}"
+            : FileName;
+
+    public string ArtistAlbumText =>
+        !string.IsNullOrWhiteSpace(Artist) && !string.IsNullOrWhiteSpace(Album)
+            ? $"{Artist} · {Album}"
+            : string.IsNullOrWhiteSpace(Artist) ? Album : Artist;
+
+    public string FileSizeText => FileSize < 1024 * 1024
+        ? $"{FileSize / 1024d:F1} KB"
+        : $"{FileSize / (1024d * 1024d):F1} MB";
+
+    public string DurationText => Duration.TotalHours >= 1 ? Duration.ToString(@"h\:mm\:ss") : Duration.ToString(@"m\:ss");
+
+    public static PlaylistSongInfo? FromFilePath(string filePath)
     {
-        private string _fileName;
-        private string _filePath;
-        private string _title;
-        private string _artist;
-        private string _album;
-        private long _fileSize;
-        private TimeSpan _duration;
-        private DateTime _addedTime;
-
-        /// <summary>
-        /// 文件名
-        /// </summary>
-        public string FileName
+        var fileInfo = new FileInfo(filePath);
+        if (!fileInfo.Exists)
         {
-            get { return _fileName; }
-            set
-            {
-                _fileName = value;
-                OnPropertyChanged(nameof(FileName));
-            }
+            return null;
         }
 
-        /// <summary>
-        /// 文件路径
-        /// </summary>
-        public string FilePath
+        string title = string.Empty;
+        string artist = string.Empty;
+        string album = string.Empty;
+        TimeSpan duration = TimeSpan.Zero;
+
+        try
         {
-            get { return _filePath; }
-            set
-            {
-                _filePath = value;
-                OnPropertyChanged(nameof(FilePath));
-            }
+            using var tagFile = TagLib.File.Create(filePath);
+            title = tagFile.Tag.Title ?? string.Empty;
+            artist = tagFile.Tag.Performers is { Length: > 0 }
+                ? string.Join(", ", tagFile.Tag.Performers)
+                : string.Empty;
+            album = tagFile.Tag.Album ?? string.Empty;
+            duration = tagFile.Properties.Duration;
+        }
+        catch
+        {
         }
 
-        /// <summary>
-        /// 歌曲标题
-        /// </summary>
-        public string Title
+        return new PlaylistSongInfo
         {
-            get { return _title; }
-            set
-            {
-                _title = value;
-                OnPropertyChanged(nameof(Title));
-                OnPropertyChanged(nameof(DisplayName));
-            }
-        }
-
-        /// <summary>
-        /// 艺术家
-        /// </summary>
-        public string Artist
-        {
-            get { return _artist; }
-            set
-            {
-                _artist = value;
-                OnPropertyChanged(nameof(Artist));
-                OnPropertyChanged(nameof(DisplayName));
-                OnPropertyChanged(nameof(ArtistText));
-            }
-        }
-
-        /// <summary>
-        /// 专辑
-        /// </summary>
-        public string Album
-        {
-            get { return _album; }
-            set
-            {
-                _album = value;
-                OnPropertyChanged(nameof(Album));
-                OnPropertyChanged(nameof(ArtistText));
-            }
-        }
-
-        /// <summary>
-        /// 文件大小
-        /// </summary>
-        public long FileSize
-        {
-            get { return _fileSize; }
-            set
-            {
-                _fileSize = value;
-                OnPropertyChanged(nameof(FileSize));
-                OnPropertyChanged(nameof(FileSizeText));
-            }
-        }
-
-        /// <summary>
-        /// 专辑封面
-        /// </summary>
-        public byte[] AlbumCover
-        {
-            get;
-            set;
-        }
-
-        /// <summary>
-        /// 时长
-        /// </summary>
-        public TimeSpan Duration
-        {
-            get { return _duration; }
-            set
-            {
-                _duration = value;
-                OnPropertyChanged(nameof(Duration));
-                OnPropertyChanged(nameof(DurationText));
-            }
-        }
-
-        /// <summary>
-        /// 添加时间
-        /// </summary>
-        public DateTime AddedTime
-        {
-            get { return _addedTime; }
-            set
-            {
-                _addedTime = value;
-                OnPropertyChanged(nameof(AddedTime));
-                OnPropertyChanged(nameof(AddedTimeText));
-            }
-        }
-
-        /// <summary>
-        /// 显示名称（优先使用标题，否则使用文件名）
-        /// </summary>
-        public string DisplayName
-        {
-            get
-            {
-                if (!string.IsNullOrWhiteSpace(Title))
-                {
-                    return string.IsNullOrWhiteSpace(Artist) ? Title : string.Format("{0} - {1}", Title, Artist);
-                }
-                return FileName;
-            }
-        }
-
-        /// <summary>
-        /// 艺术家文本
-        /// </summary>
-        public string ArtistText
-        {
-            get
-            {
-                if (!string.IsNullOrWhiteSpace(Artist) && !string.IsNullOrWhiteSpace(Album))
-                    return string.Format("{0} · {1}", Artist, Album);
-                return Artist ?? Album ?? "";
-            }
-        }
-
-        /// <summary>
-        /// 文件大小文本
-        /// </summary>
-        public string FileSizeText
-        {
-            get
-            {
-                if (FileSize < 1024)
-                    return string.Format("{0} B", FileSize);
-                if (FileSize < 1024 * 1024)
-                    return string.Format("{0:F1} KB", FileSize / 1024.0);
-                return string.Format("{0:F1} MB", FileSize / (1024.0 * 1024.0));
-            }
-        }
-
-        /// <summary>
-        /// 时长文本
-        /// </summary>
-        public string DurationText
-        {
-            get
-            {
-                if (Duration.TotalHours >= 1)
-                    return Duration.ToString("h\\:mm\\:ss");
-                return Duration.ToString("m\\:ss");
-            }
-        }
-
-        /// <summary>
-        /// 添加时间文本
-        /// </summary>
-        public string AddedTimeText
-        {
-            get { return AddedTime.ToString("yyyy-MM-dd"); }
-        }
-
-        public PlaylistSongInfo()
-        {
-            AddedTime = DateTime.Now;
-        }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected virtual void OnPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-
-        /// <summary>
-        /// 从NcmFileInfo创建
-        /// </summary>
-        public static PlaylistSongInfo FromNcmFile(NcmFileInfo ncmFile)
-        {
-            return new PlaylistSongInfo
-            {
-                FileName = ncmFile.FileName,
-                FilePath = ncmFile.FullPath,
-                FileSize = ncmFile.FileSize
-            };
-        }
-
-        /// <summary>
-        /// 从文件路径创建
-        /// </summary>
-        public static PlaylistSongInfo FromFilePath(string filePath)
-        {
-            var fileInfo = new FileInfo(filePath);
-            if (!fileInfo.Exists)
-                return null;
-
-            var songInfo = new PlaylistSongInfo
-            {
-                FileName = fileInfo.Name,
-                FilePath = fileInfo.FullName,
-                FileSize = fileInfo.Length
-            };
-
-            // 使用 TagLib 读取音频文件元数据
-            try
-            {
-                using (var file = TagLib.File.Create(filePath))
-                {
-                    // 读取基本元数据
-                    if (!string.IsNullOrWhiteSpace(file.Tag.Title))
-                        songInfo.Title = file.Tag.Title;
-                    
-                    if (file.Tag.Performers != null && file.Tag.Performers.Length > 0)
-                        songInfo.Artist = string.Join(", ", file.Tag.Performers);
-                    
-                    if (!string.IsNullOrWhiteSpace(file.Tag.Album))
-                        songInfo.Album = file.Tag.Album;
-                    
-                    // 读取时长
-                    if (file.Properties.Duration != TimeSpan.Zero)
-                        songInfo.Duration = file.Properties.Duration;
-                    
-                    // 读取专辑封面
-                    if (file.Tag.Pictures != null && file.Tag.Pictures.Length > 0)
-                    {
-                        var picture = file.Tag.Pictures[0];
-                        songInfo.AlbumCover = picture.Data.Data;
-                    }
-                }
-            }
-            catch 
-            {
-                // 如果 TagLib 读取失败，尝试使用 MediaPlayer 读取时长
-                try
-                {
-                    var mediaPlayer = new MediaPlayer();
-                    mediaPlayer.Open(new Uri(filePath));
-                    
-                    // 等待媒体打开完成（最多等待 500ms）
-                    int waitCount = 0;
-                    while (mediaPlayer.NaturalDuration.TimeSpan == TimeSpan.Zero && waitCount < 25)
-                    {
-                        System.Threading.Thread.Sleep(20);
-                        waitCount++;
-                    }
-                    
-                    if (mediaPlayer.NaturalDuration.HasTimeSpan)
-                    {
-                        songInfo.Duration = mediaPlayer.NaturalDuration.TimeSpan;
-                    }
-                    
-                    mediaPlayer.Close();
-                }
-                catch { }
-            }
-
-            return songInfo;
-        }
-
-        /// <summary>
-        /// 更新文件夹路径（当歌单重命名时调用）
-        /// </summary>
-        public void UpdateFolderPath(string newFolderPath)
-        {
-            FilePath = Path.Combine(newFolderPath, FileName);
-        }
+            FileName = fileInfo.Name,
+            FilePath = fileInfo.FullName,
+            FileSize = fileInfo.Length,
+            Title = title,
+            Artist = artist,
+            Album = album,
+            Duration = duration
+        };
     }
 }

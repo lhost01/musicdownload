@@ -4,19 +4,18 @@
 ***
 
 <p align="center">
-  <img src="favicon.ico" width="128" height="128" alt="MusicBox Logo">
+  <img src="Assets/avalonia-logo.ico" width="128" height="128" alt="MusicBox Logo">
 </p>
 
 <p align="center">
   <a href="#"><img src="https://img.shields.io/badge/.NET-9.0-blue?style=flat-square&logo=.net" alt=".NET 9.0"></a>
-  <a href="#"><img src="https://img.shields.io/badge/WPF-Application-orange?style=flat-square&logo=windows" alt="WPF"></a>
+  <a href="#"><img src="https://img.shields.io/badge/Avalonia-Desktop-orange?style=flat-square" alt="Avalonia"></a>
   <a href="#"><img src="https://img.shields.io/badge/MVVM-Architecture-green?style=flat-square" alt="MVVM"></a>
   <a href="#"><img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="License"></a>
 </p>
 
 <p align="center">
   <b>一款精美的网易云音乐 NCM 解密、下载和播放工具</b><br>
-  <i>采用 macOS 风格设计，支持歌单管理和音乐播放</i>
 </p>
 
 ***
@@ -24,6 +23,30 @@
 
 
 ## 📋 更新日志
+
+### 2026.06.17 更新
+
+#### 界面重设计
+
+- 重新设计整体 UI，统一页面层次、卡片样式和导航结构
+- 优化歌单中心、转换页和播放器区域的视觉风格与交互体验
+
+#### 歌曲下载全面升级
+
+- **关键词搜索**：支持按歌曲名、歌手名搜索网易云歌曲，选中结果即可下载
+- **格式可选**：支持选择 MP3（默认推荐）或 FLAC 无损，按所选格式优先请求对应音质
+- **导入歌单**：下载完成后可自动导入到指定歌单；支持输入新歌单名称自动创建并导入；任务记录中也可手动补导入
+- **左右分栏布局**：下载参数置于左侧可滚动区域，搜索结果与任务记录固定在右侧，窗口非全屏时也能正常查看和操作
+
+#### 问题修复
+
+- 修复搜索结果列表无法向下滚动的问题
+- 修复应用启动时因命令初始化顺序导致的 `NullReferenceException` 崩溃
+- 修复非全屏窗口下搜索结果区域被下载参数挤占、无法显示的问题
+
+#### 下载能力增强（早期）
+
+- 新增网易云歌曲 ID 下载功能，可直接输入歌曲 ID 获取并下载音频文件
 
 ### 2026.04.19 更新
 
@@ -72,9 +95,12 @@
 
 ### ⬇️ 音乐下载功能
 
-- **ID 下载**：通过网易云音乐 ID 下载歌曲
-- **批量下载**：支持多任务同时下载
-- **实时进度**：显示下载进度和状态
+- **关键词搜索**：按歌曲名、歌手名搜索并选择下载
+- **ID 下载**：直接输入网易云歌曲 ID 下载
+- **在线解析**：通过 Byfuns 公共 API 获取直链，开箱即用，无需额外部署服务
+- **格式选择**：MP3（推荐）/ FLAC 无损，默认优先 MP3
+- **导入歌单**：下载后自动导入现有或新建歌单，任务记录支持手动补导入
+- **任务记录**：保留下载历史，显示进度、速度与文件路径
 
 ### 🎨 精美 UI 设计
 
@@ -211,9 +237,13 @@
 
 ### 4. 音乐下载
 
-1. 切换到"ID 下载"标签页
-2. 输入网易云音乐歌曲 ID
-3. 点击"开始下载"
+1. 切换到「歌曲下载」页面
+2. 输入关键词点击「搜索歌曲」，或直接在「歌曲 ID」框输入 ID
+3. 选择下载格式（MP3 / FLAC）和目标歌单（可选，默认开启自动导入）
+4. 点击「下载选中」或「下载 ID」
+5. 在右侧「搜索结果」和「下载任务记录」中查看进度；已完成任务可点击「导入歌单」补导入
+
+> 下载依赖 [Byfuns API](https://www.byfuns.top/zh-cn/APIdoc/1/)，需联网使用。该接口禁止商用，请支持正版网易云音乐。
 
 ***
 

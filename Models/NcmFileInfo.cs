@@ -1,78 +1,73 @@
-using System;
+using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace 网易云音乐下载.Models
+namespace Musicbox.Models;
+
+public enum ConversionStatus
 {
-    public enum ConversionStatus
+    Pending,
+    Converting,
+    Completed,
+    Failed,
+    Cancelled
+}
+
+public partial class NcmFileInfo : ObservableObject
+{
+    [ObservableProperty]
+    private Guid id = Guid.NewGuid();
+
+    [ObservableProperty]
+    private string fileName = string.Empty;
+
+    [ObservableProperty]
+    private string fullPath = string.Empty;
+
+    [ObservableProperty]
+    private long fileSize;
+
+    [ObservableProperty]
+    private ConversionStatus status = ConversionStatus.Pending;
+
+    [ObservableProperty]
+    private int progress;
+
+    [ObservableProperty]
+    private string outputPath = string.Empty;
+
+    [ObservableProperty]
+    private string errorMessage = string.Empty;
+
+    [ObservableProperty]
+    private DateTime addedTime = DateTime.Now;
+
+    public string FileSizeText => FormatBytes(FileSize);
+
+    public string StatusText => Status switch
     {
-        Pending,
-        Converting,
-        Completed,
-        Failed,
-        Cancelled
-    }
+        ConversionStatus.Pending => "等待中",
+        ConversionStatus.Converting => "转换中",
+        ConversionStatus.Completed => "已完成",
+        ConversionStatus.Failed => "失败",
+        ConversionStatus.Cancelled => "已取消",
+        _ => "未知"
+    };
 
-    public class NcmFileInfo
+    partial void OnFileSizeChanged(long value) => OnPropertyChanged(nameof(FileSizeText));
+
+    partial void OnStatusChanged(ConversionStatus value) => OnPropertyChanged(nameof(StatusText));
+
+    private static string FormatBytes(long bytes)
     {
-        public Guid Id { get; set; }
-        public string FileName { get; set; }
-        public string FullPath { get; set; }
-        public long FileSize { get; set; }
-        public ConversionStatus Status { get; set; }
-        public int Progress { get; set; }
-        public string OutputPath { get; set; }
-        public string ErrorMessage { get; set; }
-        public DateTime AddedTime { get; set; }
+        const long kb = 1024;
+        const long mb = kb * 1024;
+        const long gb = mb * 1024;
 
-        public string FileSizeText
+        return bytes switch
         {
-            get { return FormatFileSize(FileSize); }
-        }
-
-        public string StatusText
-        {
-            get { return GetStatusText(Status); }
-        }
-
-        public NcmFileInfo()
-        {
-            Id = Guid.NewGuid();
-            AddedTime = DateTime.Now;
-            Status = ConversionStatus.Pending;
-            Progress = 0;
-        }
-
-        private string FormatFileSize(long bytes)
-        {
-            const long KB = 1024;
-            const long MB = KB * 1024;
-            const long GB = MB * 1024;
-
-            if (bytes >= GB)
-                return string.Format("{0:F2} GB", bytes / (double)GB);
-            if (bytes >= MB)
-                return string.Format("{0:F2} MB", bytes / (double)MB);
-            if (bytes >= KB)
-                return string.Format("{0:F2} KB", bytes / (double)KB);
-            return string.Format("{0} B", bytes);
-        }
-
-        private string GetStatusText(ConversionStatus status)
-        {
-            switch (status)
-            {
-                case ConversionStatus.Pending:
-                    return "等待中";
-                case ConversionStatus.Converting:
-                    return "转换中";
-                case ConversionStatus.Completed:
-                    return "已完成";
-                case ConversionStatus.Failed:
-                    return "失败";
-                case ConversionStatus.Cancelled:
-                    return "已取消";
-                default:
-                    return "未知";
-            }
-        }
+            >= gb => $"{bytes / (double)gb:F2} GB",
+            >= mb => $"{bytes / (double)mb:F2} MB",
+            >= kb => $"{bytes / (double)kb:F2} KB",
+            _ => $"{bytes} B"
+        };
     }
 }
