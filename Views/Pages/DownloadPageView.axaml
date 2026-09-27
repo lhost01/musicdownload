@@ -1,0 +1,273 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Musicbox.ViewModels.Pages"
+             xmlns:model="using:Musicbox.Models"
+             x:Class="Musicbox.Views.Pages.DownloadPageView"
+             x:Name="DownloadRoot"
+             x:DataType="vm:DownloadPageViewModel"
+             HorizontalAlignment="Stretch"
+             VerticalAlignment="Stretch"
+             HorizontalContentAlignment="Stretch"
+             VerticalContentAlignment="Stretch">
+
+    <Grid RowDefinitions="Auto,*"
+          RowSpacing="16"
+          VerticalAlignment="Stretch"
+          HorizontalAlignment="Stretch"
+          MinHeight="0">
+        <Border Padding="22"
+                Background="#10162B"
+                CornerRadius="22"
+                BorderBrush="#253158"
+                BorderThickness="1">
+            <StackPanel Spacing="10">
+                <TextBlock Text="歌曲下载"
+                           FontSize="26"
+                           FontWeight="SemiBold"
+                           Foreground="#F6F8FF" />
+                <TextBlock Text="打开应用即可搜索和下载网易云歌曲。下载完成后可自动导入歌单，也可在任务记录中手动导入。"
+                           TextWrapping="Wrap"
+                           Foreground="#9EB0DB" />
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="1"
+              ColumnDefinitions="360,*"
+              ColumnSpacing="16"
+              MinHeight="0"
+              VerticalAlignment="Stretch">
+            <Border Padding="20"
+                    Background="#10162B"
+                    CornerRadius="22"
+                    BorderBrush="#253158"
+                    BorderThickness="1"
+                    ClipToBounds="True">
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Spacing="14">
+                        <TextBlock Text="下载参数"
+                                   Foreground="#7BE6D7"
+                                   FontSize="13" />
+                        <TextBox Text="{Binding SearchKeyword}" PlaceholderText="输入歌曲名、歌手名或关键词搜索" />
+                        <TextBox Text="{Binding SongId}" PlaceholderText="请输入网易云歌曲 ID（搜索选中后自动填入）" />
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                            <TextBlock Text="下载格式"
+                                       VerticalAlignment="Center"
+                                       Foreground="#A5B5DE" />
+                            <ComboBox Grid.Column="1"
+                                      ItemsSource="{Binding FormatOptions}"
+                                      SelectedItem="{Binding SelectedFormatOption}" />
+                        </Grid>
+                        <CheckBox Content="下载后自动导入歌单"
+                                  IsChecked="{Binding ImportToPlaylistAfterDownload}" />
+                        <ComboBox ItemsSource="{Binding AvailablePlaylists}"
+                                  SelectedItem="{Binding SelectedImportPlaylist}"
+                                  IsEnabled="{Binding ImportToPlaylistAfterDownload}"
+                                  PlaceholderText="选择目标歌单">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="model:PlaylistInfo">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="{Binding Name}" />
+                                        <TextBlock Text="{Binding SongCountText}"
+                                                   FontSize="12"
+                                                   Foreground="#7BE6D7" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <TextBox Text="{Binding NewPlaylistName}"
+                                 IsEnabled="{Binding ImportToPlaylistAfterDownload}"
+                                 PlaceholderText="或输入新歌单名称（自动创建并导入）" />
+                        <TextBox Text="{Binding OutputPath}" PlaceholderText="下载目录" />
+                        <Button Content="选择目录"
+                                Command="{Binding BrowseOutputCommand}"
+                                Background="#1E2747"
+                                Foreground="#E4EBFF"
+                                CornerRadius="16"
+                                BorderBrush="Transparent" />
+                        <ProgressBar Value="{Binding DownloadProgress}" Maximum="100" Height="10" />
+                        <TextBlock Text="{Binding StatusText}"
+                                   Foreground="#A5B5DE"
+                                   TextWrapping="Wrap" />
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                            <Button Content="搜索歌曲"
+                                    Command="{Binding SearchSongsCommand}"
+                                    Background="#5A7CFF"
+                                    Foreground="White"
+                                    CornerRadius="16"
+                                    Padding="14,12"
+                                    BorderBrush="Transparent" />
+                            <Button Grid.Column="1"
+                                    Content="下载 ID"
+                                    Command="{Binding StartDownloadCommand}"
+                                    Background="#232B49"
+                                    Foreground="#DDE5FF"
+                                    CornerRadius="16"
+                                    Padding="14,12"
+                                    BorderBrush="Transparent" />
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <Grid Grid.Column="1"
+                  RowDefinitions="1.15*,0.85*"
+                  RowSpacing="16"
+                  MinHeight="0"
+                  VerticalAlignment="Stretch">
+                <Border Grid.Row="0"
+                        Padding="20"
+                        Background="#10162B"
+                        CornerRadius="22"
+                        BorderBrush="#253158"
+                        BorderThickness="1"
+                        MinHeight="180"
+                        ClipToBounds="True">
+                    <Grid RowDefinitions="Auto,*"
+                          MinHeight="0"
+                          VerticalAlignment="Stretch">
+                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+                            <TextBlock Text="搜索结果"
+                                       Foreground="#F7F9FF"
+                                       FontSize="18"
+                                       FontWeight="SemiBold" />
+                            <Button Grid.Column="1"
+                                    Content="下载选中"
+                                    Command="{Binding DownloadSelectedSongCommand}"
+                                    Background="#5A7CFF"
+                                    Foreground="White"
+                                    CornerRadius="14"
+                                    BorderBrush="Transparent" />
+                            <Button Grid.Column="2"
+                                    Content="取消下载"
+                                    Command="{Binding CancelDownloadCommand}"
+                                    Background="#232B49"
+                                    Foreground="#DDE5FF"
+                                    CornerRadius="14"
+                                    BorderBrush="Transparent" />
+                        </Grid>
+
+                        <ListBox Grid.Row="1"
+                                 Margin="0,16,0,0"
+                                 ItemsSource="{Binding SearchResults}"
+                                 SelectedItem="{Binding SelectedSearchResult}"
+                                 VerticalAlignment="Stretch"
+                                 MinHeight="0"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 Background="Transparent"
+                                 BorderBrush="Transparent">
+                            <ListBox.Styles>
+                                <Style Selector="ListBoxItem">
+                                    <Setter Property="Padding" Value="0" />
+                                    <Setter Property="Margin" Value="0,0,0,10" />
+                                    <Setter Property="Background" Value="Transparent" />
+                                    <Setter Property="BorderThickness" Value="0" />
+                                </Style>
+                            </ListBox.Styles>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="model:SongSearchResult">
+                                    <Border Margin="0,0,0,10"
+                                            Padding="16"
+                                            Background="#0C1123"
+                                            CornerRadius="18">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                            <StackPanel Spacing="6">
+                                                <TextBlock Text="{Binding SongId}"
+                                                           Foreground="#7BE6D7"
+                                                           FontSize="12" />
+                                                <TextBlock Text="{Binding DisplayName}"
+                                                           Foreground="#F7F9FF"
+                                                           FontSize="18"
+                                                           FontWeight="SemiBold"
+                                                           TextWrapping="Wrap" />
+                                                <TextBlock Text="{Binding Subtitle}"
+                                                           Foreground="#A7B7E1"
+                                                           TextWrapping="Wrap" />
+                                            </StackPanel>
+
+                                            <Border Grid.Column="1"
+                                                    Background="#1C284D"
+                                                    CornerRadius="999"
+                                                    Padding="12,6"
+                                                    VerticalAlignment="Top">
+                                                <TextBlock Text="{Binding DurationText}"
+                                                           Foreground="#DDE5FF" />
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="1"
+                        Padding="20"
+                        Background="#10162B"
+                        CornerRadius="22"
+                        BorderBrush="#253158"
+                        BorderThickness="1"
+                        MinHeight="140"
+                        ClipToBounds="True">
+                    <Grid RowDefinitions="Auto,*"
+                          MinHeight="0"
+                          VerticalAlignment="Stretch">
+                        <TextBlock Text="下载任务记录"
+                                   Foreground="#F7F9FF"
+                                   FontSize="18"
+                                   FontWeight="SemiBold" />
+
+                        <ScrollViewer Grid.Row="1"
+                                      Margin="0,16,0,0"
+                                      VerticalAlignment="Stretch"
+                                      MinHeight="0"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl ItemsSource="{Binding DownloadTasks}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="model:DownloadTaskInfo">
+                                        <Border Margin="0,0,0,10"
+                                                Padding="16"
+                                                Background="#0C1123"
+                                                CornerRadius="18">
+                                            <StackPanel Spacing="8">
+                                                <TextBlock Text="{Binding SongId}"
+                                                           Foreground="#7BE6D7"
+                                                           FontSize="13" />
+                                                <TextBlock Text="{Binding SongName}"
+                                                           Foreground="#F7F9FF"
+                                                           FontSize="18"
+                                                           FontWeight="SemiBold" />
+                                                <TextBlock Text="{Binding Artist}"
+                                                           Foreground="#A7B7E1" />
+                                                <ProgressBar Value="{Binding Progress}" Maximum="100" Height="8" />
+                                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                                    <TextBlock Text="{Binding StatusText}" Foreground="#DDE5FF" />
+                                                    <TextBlock Text="{Binding FileSizeText}" Foreground="#A5B5DE" />
+                                                    <TextBlock Text="{Binding DownloadSpeedText}" Foreground="#A5B5DE" />
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding OutputPath}"
+                                                           Foreground="#7F93C4"
+                                                           TextWrapping="Wrap" />
+                                                <Button Content="导入歌单"
+                                                        Command="{Binding #DownloadRoot.((vm:DownloadPageViewModel)DataContext).ImportTaskToPlaylistCommand}"
+                                                        CommandParameter="{Binding}"
+                                                        Background="#23365F"
+                                                        Foreground="#E4EBFF"
+                                                        CornerRadius="12"
+                                                        Padding="12,6"
+                                                        HorizontalAlignment="Left"
+                                                        BorderBrush="Transparent" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

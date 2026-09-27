@@ -1,0 +1,110 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Musicbox.ViewModels.Pages"
+             xmlns:controls="using:Musicbox.Controls"
+             x:Class="Musicbox.Views.Pages.HomePageView"
+             x:DataType="vm:HomePageViewModel">
+
+    <Grid ColumnDefinitions="1.15*,0.85*" RowDefinitions="Auto,Auto,*" RowSpacing="16" ColumnSpacing="16">
+        <Border Grid.ColumnSpan="2"
+                Padding="28"
+                Background="#10162B"
+                CornerRadius="24"
+                BorderBrush="#253158"
+                BorderThickness="1">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Spacing="10" VerticalAlignment="Center">
+                    <TextBlock Text="欢迎来到 Musicbox"
+                               FontSize="28"
+                               FontWeight="SemiBold"
+                               Foreground="#F8FAFF" />
+                    <TextBlock Text="今天的音乐工作台已经准备好了。"
+                               TextWrapping="Wrap"
+                               FontSize="14"
+                               Foreground="#A8B8E3" />
+                </StackPanel>
+
+                <Border Grid.Column="1"
+                        Width="96"
+                        Height="96"
+                        CornerRadius="48"
+                        Background="#1D2750"
+                        HorizontalAlignment="Right">
+                    <TextBlock Text="MB"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               FontSize="24"
+                               FontWeight="Bold"
+                               Foreground="#7BE6D7" />
+                </Border>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="1"
+                Padding="28"
+                Background="#10162B"
+                CornerRadius="24"
+                BorderBrush="#253158"
+                BorderThickness="1">
+            <StackPanel Spacing="10">
+                <TextBlock Text="当前时间"
+                           Foreground="#7BE6D7"
+                           FontSize="13" />
+                <TextBlock Text="{Binding CurrentTimeText}"
+                           FontSize="54"
+                           FontWeight="Bold"
+                           Foreground="#F6F8FF" />
+                <TextBlock Text="{Binding CurrentDateText}"
+                           FontSize="18"
+                           Foreground="#A0B0DA" />
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="1"
+                Grid.Column="1"
+                Padding="28"
+                Background="#10162B"
+                CornerRadius="24"
+                BorderBrush="#253158"
+                BorderThickness="1">
+            <StackPanel Spacing="12">
+                <TextBlock Text="每日一言"
+                           Foreground="#7BE6D7"
+                           FontSize="13" />
+                <TextBlock Text="{Binding DailyQuote}"
+                           TextWrapping="Wrap"
+                           FontSize="24"
+                           FontWeight="SemiBold"
+                           Foreground="#F7F9FF" />
+                <TextBlock Text="让页面在第一眼就有情绪和温度。"
+                           Foreground="#95A7D6"
+                           FontSize="13" />
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="2"
+                Grid.ColumnSpan="2"
+                Padding="18"
+                Background="#10162B"
+                CornerRadius="24"
+                BorderBrush="#253158"
+                BorderThickness="1">
+            <Grid RowDefinitions="Auto,*">
+                <StackPanel Margin="10,4,10,16" Spacing="6">
+                    <TextBlock Text="动态视觉"
+                               Foreground="#7BE6D7"
+                               FontSize="13" />
+                    <TextBlock Text="使用自绘动画营造更现代的首页氛围。"
+                               Foreground="#A3B2DD"
+                               FontSize="14" />
+                </StackPanel>
+                <Border Grid.Row="1"
+                        Background="#0B1022"
+                        CornerRadius="20"
+                        ClipToBounds="True">
+                    <controls:AmbientWaveControl />
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

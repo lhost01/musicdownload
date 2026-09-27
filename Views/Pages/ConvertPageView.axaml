@@ -1,0 +1,276 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Musicbox.ViewModels.Pages"
+             xmlns:model="using:Musicbox.Models"
+             x:Class="Musicbox.Views.Pages.ConvertPageView"
+             x:DataType="vm:ConvertPageViewModel">
+
+    <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="16">
+        <Border Padding="22"
+                Background="#10162B"
+                CornerRadius="22"
+                BorderBrush="#253158"
+                BorderThickness="1">
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="14">
+                <StackPanel Spacing="6">
+                    <TextBlock Text="NCM 转换工作台"
+                               FontSize="26"
+                               FontWeight="SemiBold"
+                               Foreground="#F6F8FF" />
+                    <TextBlock Text="迁移自 `musicdownload-main` 的核心能力，支持单文件、批量文件夹和多文件模式。"
+                               TextWrapping="Wrap"
+                               Foreground="#9EB0DB" />
+                </StackPanel>
+
+                <Button Grid.Column="1"
+                        Content="开始转换"
+                        Command="{Binding StartConversionCommand}"
+                        Background="#5A7CFF"
+                        Foreground="White"
+                        CornerRadius="16"
+                        Padding="18,12"
+                        BorderBrush="Transparent" />
+
+                <Button Grid.Column="2"
+                        Content="取消"
+                        Command="{Binding CancelConversionCommand}"
+                        Background="#232B49"
+                        Foreground="#DDE5FF"
+                        CornerRadius="16"
+                        Padding="18,12"
+                        BorderBrush="Transparent" />
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" ColumnDefinitions="1.15*,0.85*" ColumnSpacing="16">
+            <Border Padding="20"
+                    Background="#10162B"
+                    CornerRadius="22"
+                    BorderBrush="#253158"
+                    BorderThickness="1">
+                <StackPanel Spacing="14">
+                    <TextBlock Text="输入来源"
+                               Foreground="#7BE6D7"
+                               FontSize="13" />
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <ToggleButton Content="单文件"
+                                      Command="{Binding SetSingleFileModeCommand}"
+                                      IsChecked="{Binding IsSingleFileMode}" />
+                        <ToggleButton Content="文件夹"
+                                      Command="{Binding SetBatchModeCommand}"
+                                      IsChecked="{Binding IsBatchMode}" />
+                        <ToggleButton Content="多文件"
+                                      Command="{Binding SetMultipleFilesModeCommand}"
+                                      IsChecked="{Binding IsMultipleFilesMode}" />
+                    </StackPanel>
+                    <TextBox Text="{Binding InputPath}"
+                             PlaceholderText="请选择输入文件或文件夹"
+                             IsReadOnly="True" />
+                    <Button Content="选择输入"
+                            Command="{Binding BrowseInputCommand}"
+                            Background="#1E2747"
+                            Foreground="#E4EBFF"
+                            CornerRadius="16"
+                            BorderBrush="Transparent" />
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="1"
+                    Padding="20"
+                    Background="#10162B"
+                    CornerRadius="22"
+                    BorderBrush="#253158"
+                    BorderThickness="1">
+                <StackPanel Spacing="14">
+                    <TextBlock Text="输出设置"
+                               Foreground="#7BE6D7"
+                               FontSize="13" />
+                    <TextBox Text="{Binding OutputPath}"
+                             PlaceholderText="输出目录" />
+                    <Button Content="选择输出目录"
+                            Command="{Binding BrowseOutputCommand}"
+                            Background="#1E2747"
+                            Foreground="#E4EBFF"
+                            CornerRadius="16"
+                            BorderBrush="Transparent" />
+                    <ComboBox ItemsSource="{Binding SupportedFormats}"
+                              SelectedItem="{Binding OutputFormat}" />
+                    <ProgressBar Value="{Binding ConversionProgress}" Maximum="100" Height="10" />
+                    <TextBlock Text="{Binding ConversionStatusText}"
+                               TextWrapping="Wrap"
+                               Foreground="#A5B5DE" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="2"
+                Padding="20"
+                Background="#10162B"
+                CornerRadius="22"
+                BorderBrush="#3D57B6"
+                BorderThickness="1"
+                IsVisible="{Binding ShowImportToPlaylistOptions}">
+            <Grid ColumnDefinitions="1.05*,0.95*,Auto" ColumnSpacing="16">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="转换完成后导入歌单"
+                               Foreground="#F7F9FF"
+                               FontSize="18"
+                               FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding ImportSummaryText}"
+                               Foreground="#7BE6D7"
+                               TextWrapping="Wrap" />
+                    <TextBlock Text="可选择现有歌单直接导入；如果当前没有歌单，直接在右侧输入新歌单名称创建后导入。"
+                               Foreground="#A4B4DE"
+                               TextWrapping="Wrap" />
+                    <ComboBox ItemsSource="{Binding AvailablePlaylists}"
+                              SelectedItem="{Binding SelectedImportPlaylist}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="model:PlaylistInfo">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding Name}" />
+                                    <TextBlock Text="{Binding SongCountText}"
+                                               FontSize="12"
+                                               Foreground="#7BE6D7" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Button Content="导入到现有歌单"
+                            Command="{Binding ImportToExistingPlaylistCommand}"
+                            Background="#5A7CFF"
+                            Foreground="White"
+                            CornerRadius="16"
+                            BorderBrush="Transparent" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Spacing="10">
+                    <TextBlock Text="导入到新歌单"
+                               Foreground="#F7F9FF"
+                               FontSize="18"
+                               FontWeight="SemiBold" />
+                    <TextBlock Text="输入一个新歌单名称，程序会先创建歌单，再把本次转换成功的 MP3/FLAC/WAV 文件导入进去。"
+                               Foreground="#A4B4DE"
+                               TextWrapping="Wrap" />
+                    <TextBox Text="{Binding NewPlaylistName}"
+                             PlaceholderText="输入新歌单名称" />
+                    <Button Content="创建新歌单并导入"
+                            Command="{Binding ImportToNewPlaylistCommand}"
+                            Background="#23365F"
+                            Foreground="#E4EBFF"
+                            CornerRadius="16"
+                            BorderBrush="Transparent" />
+                    <TextBlock Text="{Binding ImportStatusText}"
+                               Foreground="#DDE5FF"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="2"
+                            VerticalAlignment="Top"
+                            Spacing="10">
+                    <Button Content="暂不导入"
+                            Command="{Binding SkipImportToPlaylistCommand}"
+                            Background="#232B49"
+                            Foreground="#DDE5FF"
+                            CornerRadius="16"
+                            Padding="18,12"
+                            BorderBrush="Transparent" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="3" ColumnDefinitions="1.15*,0.85*" ColumnSpacing="16">
+            <Border Padding="20"
+                    Background="#10162B"
+                    CornerRadius="22"
+                    BorderBrush="#253158"
+                    BorderThickness="1">
+                <Grid RowDefinitions="Auto,*">
+                    <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,14" ColumnSpacing="10">
+                        <TextBlock Text="待转换文件"
+                                   Foreground="#F7F9FF"
+                                   FontSize="18"
+                                   FontWeight="SemiBold" />
+                        <Button Grid.Column="1"
+                                Content="删除选中"
+                                Command="{Binding DeleteSelectedFileCommand}"
+                                Background="#232B49"
+                                Foreground="#DCE5FF"
+                                CornerRadius="14"
+                                BorderBrush="Transparent" />
+                        <Button Grid.Column="2"
+                                Content="清空列表"
+                                Command="{Binding ClearFilesCommand}"
+                                Background="#232B49"
+                                Foreground="#DCE5FF"
+                                CornerRadius="14"
+                                BorderBrush="Transparent" />
+                    </Grid>
+
+                    <ListBox Grid.Row="1"
+                             ItemsSource="{Binding NcmFiles}"
+                             SelectedItem="{Binding SelectedFile}"
+                             Background="Transparent"
+                             BorderBrush="Transparent">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="model:NcmFileInfo">
+                                <Border Margin="0,0,0,10"
+                                        Padding="16"
+                                        Background="#0C1123"
+                                        CornerRadius="18">
+                                    <StackPanel Spacing="6">
+                                        <TextBlock Text="{Binding FileName}"
+                                                   Foreground="#F7F9FF"
+                                                   FontWeight="SemiBold" />
+                                        <TextBlock Text="{Binding FullPath}"
+                                                   Foreground="#8FA0CB"
+                                                   TextWrapping="Wrap" />
+                                        <StackPanel Orientation="Horizontal" Spacing="10">
+                                            <TextBlock Text="{Binding FileSizeText}" Foreground="#7BE6D7" />
+                                            <TextBlock Text="{Binding StatusText}" Foreground="#9CB0E0" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1"
+                    Padding="20"
+                    Background="#10162B"
+                    CornerRadius="22"
+                    BorderBrush="#253158"
+                    BorderThickness="1">
+                <Grid RowDefinitions="Auto,Auto,*">
+                    <TextBlock Text="转换结果"
+                               Foreground="#F7F9FF"
+                               FontSize="18"
+                               FontWeight="SemiBold" />
+                    <TextBlock Grid.Row="1"
+                               Margin="0,8,0,16"
+                               Text="{Binding CurrentConvertingFile}"
+                               Foreground="#92A5D5"
+                               TextWrapping="Wrap" />
+
+                    <ScrollViewer Grid.Row="2">
+                        <ItemsControl ItemsSource="{Binding ConvertedFiles}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="0,0,0,10"
+                                            Padding="14"
+                                            Background="#0C1123"
+                                            CornerRadius="16">
+                                        <TextBlock Text="{Binding .}"
+                                                   TextWrapping="Wrap"
+                                                   Foreground="#DDE5FF" />
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

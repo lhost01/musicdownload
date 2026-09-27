@@ -1,0 +1,345 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Musicbox.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        d:DesignWidth="1480"
+        d:DesignHeight="920"
+        x:Class="Musicbox.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="Musicbox"
+        Width="1480"
+        Height="920"
+        MinWidth="1180"
+        MinHeight="760"
+        Background="#060A18"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="1"
+        WindowDecorations="None"
+        TransparencyLevelHint="AcrylicBlur"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Styles>
+        <Style Selector="Border.panel">
+            <Setter Property="Background" Value="#12182D" />
+            <Setter Property="CornerRadius" Value="22" />
+            <Setter Property="BorderBrush" Value="#253357" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style Selector="ToggleButton.nav">
+            <Setter Property="Height" Value="68" />
+            <Setter Property="Margin" Value="0,0,0,12" />
+            <Setter Property="Padding" Value="12" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Foreground" Value="#E8EEFF" />
+            <Setter Property="Background" Value="#0E1427" />
+            <Setter Property="BorderBrush" Value="#202D4D" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="18" />
+        </Style>
+
+        <Style Selector="ToggleButton.nav:pointerover">
+            <Setter Property="Background" Value="#18233E" />
+            <Setter Property="BorderBrush" Value="#3E5CB9" />
+        </Style>
+
+        <Style Selector="ToggleButton.nav:checked">
+            <Setter Property="Background" Value="#1D2D59" />
+            <Setter Property="BorderBrush" Value="#6F8DFF" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style Selector="Button.title">
+            <Setter Property="Width" Value="42" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="#DDE5FF" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="CornerRadius" Value="12" />
+        </Style>
+
+        <Style Selector="Button.title:pointerover">
+            <Setter Property="Background" Value="#20284A" />
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="54,*" Margin="14">
+        <Border Grid.Row="0"
+                Margin="0,0,0,12"
+                Padding="16,0"
+                Classes="panel"
+                PointerPressed="OnTitleBarPointerPressed">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="12">
+                    <Border Width="38"
+                            Height="38"
+                            CornerRadius="19"
+                            Background="#162446"
+                            BorderBrush="#34518F"
+                            BorderThickness="1">
+                        <Grid>
+                            <Border Width="22"
+                                    Height="22"
+                                    CornerRadius="11"
+                                    Background="#6E89FF"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center" />
+                            <Border Width="8"
+                                    Height="8"
+                                    CornerRadius="4"
+                                    Background="#0F1730"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center" />
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="3"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Bottom"
+                                        Margin="0,0,7,7">
+                                <Border Width="3" Height="10" Background="#7BE6D7" CornerRadius="2" />
+                                <Border Width="3" Height="14" Background="#B9C8FF" CornerRadius="2" />
+                                <Border Width="3" Height="8" Background="#7BE6D7" CornerRadius="2" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center" Spacing="0">
+                        <TextBlock Text="Musicbox Pulse"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Foreground="#F4F7FF" />
+                        <TextBlock Text="{Binding PageTitle}"
+                                   FontSize="12"
+                                   Foreground="#A8B7DD" />
+                    </StackPanel>
+                </StackPanel>
+
+                <TextBlock Grid.Column="1"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Text="更干净的导航，更聚焦的音乐工作流"
+                           Foreground="#A8B8E6"
+                           FontSize="13" />
+
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
+                            Spacing="8"
+                            VerticalAlignment="Center">
+                    <Button Classes="title" Content="_" Click="OnMinimizeClick" />
+                    <Button Classes="title" Content="[ ]" Click="OnMaximizeClick" />
+                    <Button Classes="title" Content="X" Click="OnCloseClick" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" ColumnDefinitions="260,*" ColumnSpacing="12">
+            <Border Classes="panel" Padding="18">
+                <Grid RowDefinitions="Auto,Auto,*,Auto">
+                    <Border Padding="16"
+                            Background="#0D1325"
+                            CornerRadius="20"
+                            BorderBrush="#1F2D4C"
+                            BorderThickness="1">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                            <Border Width="44"
+                                    Height="44"
+                                    CornerRadius="22"
+                                    Background="#15264A"
+                                    BorderBrush="#33518E"
+                                    BorderThickness="1">
+                                <Grid>
+                                    <Border Width="26"
+                                            Height="26"
+                                            CornerRadius="13"
+                                            Background="#6A86FF"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center" />
+                                    <Border Width="9"
+                                            Height="9"
+                                            CornerRadius="4.5"
+                                            Background="#0E152D"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center" />
+                                    <StackPanel Orientation="Horizontal"
+                                                Spacing="3"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Bottom"
+                                                Margin="0,0,8,8">
+                                        <Border Width="3" Height="11" Background="#7BE6D7" CornerRadius="2" />
+                                        <Border Width="3" Height="16" Background="#DDE5FF" CornerRadius="2" />
+                                        <Border Width="3" Height="8" Background="#7BE6D7" CornerRadius="2" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <StackPanel Grid.Column="1" Spacing="3">
+                                <TextBlock Text="Musicbox Pulse"
+                                           Foreground="#F4F7FF"
+                                           FontSize="20"
+                                           FontWeight="SemiBold" />
+                                <TextBlock Text="音乐下载、转换、歌单整理都集中在一个更清晰的工作台里。"
+                                           Foreground="#99ACD7"
+                                           FontSize="12"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <StackPanel Grid.Row="1" Margin="0,24,0,0">
+                        <ToggleButton Classes="nav"
+                                      Command="{Binding ShowHomeCommand}"
+                                      IsChecked="{Binding IsHomeSelected}">
+                            <Grid ColumnDefinitions="38,*" ColumnSpacing="12">
+                                <Border Width="38"
+                                        Height="38"
+                                        CornerRadius="12"
+                                        Background="#22325A"
+                                        BorderBrush="#314776"
+                                        BorderThickness="1">
+                                    <TextBlock Text="H"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Foreground="#EAF0FF"
+                                               FontWeight="SemiBold" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock Text="首页"
+                                               Foreground="#F4F7FF"
+                                               FontSize="15"
+                                               FontWeight="SemiBold" />
+                                    <TextBlock Text="总览时间、每日一言和视觉氛围"
+                                               Foreground="#9DB1DE"
+                                               FontSize="11" />
+                                </StackPanel>
+                            </Grid>
+                        </ToggleButton>
+                        <ToggleButton Classes="nav"
+                                      Command="{Binding ShowConvertCommand}"
+                                      IsChecked="{Binding IsConvertSelected}">
+                            <Grid ColumnDefinitions="38,*" ColumnSpacing="12">
+                                <Border Width="38"
+                                        Height="38"
+                                        CornerRadius="12"
+                                        Background="#213052"
+                                        BorderBrush="#32466E"
+                                        BorderThickness="1">
+                                    <TextBlock Text="C"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Foreground="#EAF0FF"
+                                               FontWeight="SemiBold" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock Text="NCM 转换"
+                                               Foreground="#F4F7FF"
+                                               FontSize="15"
+                                               FontWeight="SemiBold" />
+                                    <TextBlock Text="批量解锁并导出为常见音频格式"
+                                               Foreground="#9DB1DE"
+                                               FontSize="11" />
+                                </StackPanel>
+                            </Grid>
+                        </ToggleButton>
+                        <ToggleButton Classes="nav"
+                                      Command="{Binding ShowDownloadCommand}"
+                                      IsChecked="{Binding IsDownloadSelected}">
+                            <Grid ColumnDefinitions="38,*" ColumnSpacing="12">
+                                <Border Width="38"
+                                        Height="38"
+                                        CornerRadius="12"
+                                        Background="#213052"
+                                        BorderBrush="#32466E"
+                                        BorderThickness="1">
+                                    <TextBlock Text="D"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Foreground="#EAF0FF"
+                                               FontWeight="SemiBold" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock Text="歌曲下载"
+                                               Foreground="#F4F7FF"
+                                               FontSize="15"
+                                               FontWeight="SemiBold" />
+                                    <TextBlock Text="搜索、下载并管理来源文件"
+                                               Foreground="#9DB1DE"
+                                               FontSize="11" />
+                                </StackPanel>
+                            </Grid>
+                        </ToggleButton>
+                        <ToggleButton Classes="nav"
+                                      Command="{Binding ShowPlaylistCommand}"
+                                      IsChecked="{Binding IsPlaylistSelected}">
+                            <Grid ColumnDefinitions="38,*" ColumnSpacing="12">
+                                <Border Width="38"
+                                        Height="38"
+                                        CornerRadius="12"
+                                        Background="#233558"
+                                        BorderBrush="#375182"
+                                        BorderThickness="1">
+                                    <TextBlock Text="P"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Foreground="#EAF0FF"
+                                               FontWeight="SemiBold" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock Text="歌单中心"
+                                               Foreground="#F4F7FF"
+                                               FontSize="15"
+                                               FontWeight="SemiBold" />
+                                    <TextBlock Text="可以自由导入歌曲播放"
+                                               Foreground="#9DB1DE"
+                                               FontSize="11" />
+                                </StackPanel>
+                            </Grid>
+                        </ToggleButton>
+                    </StackPanel>
+
+                    <Border Grid.Row="2"
+                            Margin="0,16,0,0"
+                            Padding="16"
+                            Background="#0D1325"
+                            BorderBrush="#1E2A45"
+                            BorderThickness="1"
+                            CornerRadius="20"
+                            VerticalAlignment="Bottom">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="导航提示"
+                                       FontSize="12"
+                                       Foreground="#7BE6D7" />
+                            <TextBlock Text="选中项用更高对比的深蓝底色和亮边框突出，未选中项保持低干扰。"
+                                       TextWrapping="Wrap"
+                                       Foreground="#DCE6FF"
+                                       FontSize="14" />
+                            <TextBlock Text="歌单创建后会自动写入识别标记文件。"
+                                       TextWrapping="Wrap"
+                                       Foreground="#97A8D6"
+                                       FontSize="12" />
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Grid.Row="3"
+                               Margin="0,16,0,4"
+                               Text="Musicbox Pulse 2026"
+                               HorizontalAlignment="Center"
+                               Foreground="#7282AD"
+                               FontSize="12" />
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1" Classes="panel" Padding="18">
+                <TransitioningContentControl Content="{Binding CurrentPage}"
+                                             HorizontalAlignment="Stretch"
+                                             VerticalAlignment="Stretch"
+                                             HorizontalContentAlignment="Stretch"
+                                             VerticalContentAlignment="Stretch">
+                    <TransitioningContentControl.PageTransition>
+                        <PageSlide Duration="0:0:0.35" Orientation="Horizontal" />
+                    </TransitioningContentControl.PageTransition>
+                </TransitioningContentControl>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

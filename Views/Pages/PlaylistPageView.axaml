@@ -1,0 +1,589 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Musicbox.ViewModels.Pages"
+             xmlns:model="using:Musicbox.Models"
+             x:Class="Musicbox.Views.Pages.PlaylistPageView"
+             x:DataType="vm:PlaylistPageViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="Border.glass-panel">
+            <Setter Property="Background" Value="#0F1630" />
+            <Setter Property="BorderBrush" Value="#26345F" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="24" />
+        </Style>
+
+        <Style Selector="Button.action-btn">
+            <Setter Property="Foreground" Value="#E4EBFF" />
+            <Setter Property="Background" Value="#1D2749" />
+            <Setter Property="BorderBrush" Value="#2B3B6E" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="Padding" Value="18,12" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.18" />
+                    <BrushTransition Property="BorderBrush" Duration="0:0:0.18" />
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <Style Selector="Button.action-btn:pointerover">
+            <Setter Property="Background" Value="#273564" />
+            <Setter Property="BorderBrush" Value="#5A7CFF" />
+        </Style>
+
+        <Style Selector="Button.primary-btn">
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Background" Value="#5A7CFF" />
+            <Setter Property="BorderBrush" Value="#5A7CFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="Padding" Value="18,12" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.18" />
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <Style Selector="Button.primary-btn:pointerover">
+            <Setter Property="Background" Value="#7290FF" />
+        </Style>
+
+        <Style Selector="Border.cover-card">
+            <Setter Property="Background" Value="#131D3E" />
+            <Setter Property="BorderBrush" Value="#324474" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="20" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.18" />
+                    <BrushTransition Property="BorderBrush" Duration="0:0:0.18" />
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <Style Selector="Border.cover-card:pointerover">
+            <Setter Property="Background" Value="#1A2852" />
+            <Setter Property="BorderBrush" Value="#5A7CFF" />
+        </Style>
+
+        <Style Selector="ListBox.playlist-wall">
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+
+        <Style Selector="ListBox.playlist-wall ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0,0,14,14" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        </Style>
+
+        <Style Selector="ListBox.playlist-wall ListBoxItem:selected Border.cover-card">
+            <Setter Property="BorderBrush" Value="#7C96FF" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="Background" Value="#1B2A58" />
+        </Style>
+
+        <Style Selector="Border.song-card">
+            <Setter Property="Background" Value="#111A37" />
+            <Setter Property="BorderBrush" Value="#243256" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="20" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.18" />
+                    <BrushTransition Property="BorderBrush" Duration="0:0:0.18" />
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <Style Selector="Border.song-card:pointerover">
+            <Setter Property="Background" Value="#172248" />
+            <Setter Property="BorderBrush" Value="#4E70E8" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="*,Auto" RowSpacing="18">
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="18">
+                <Border Padding="24" Classes="glass-panel">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#121A36" Offset="0" />
+                            <GradientStop Color="#172752" Offset="0.55" />
+                            <GradientStop Color="#0E1430" Offset="1" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+
+                    <Grid ColumnDefinitions="1.1*,0.95*" ColumnSpacing="18">
+                        <Grid ColumnDefinitions="136,*" ColumnSpacing="18">
+                            <Border Width="136"
+                                    Height="136"
+                                    CornerRadius="28"
+                                    Background="#1B2855"
+                                    BorderBrush="#35508F"
+                                    BorderThickness="1">
+                                <Grid>
+                                    <Image Source="{Binding SelectedPlaylistCoverBitmap}"
+                                           Stretch="UniformToFill" />
+                                    <Border Width="38"
+                                            Height="38"
+                                            Margin="0,0,10,10"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Bottom"
+                                            CornerRadius="19"
+                                            Background="#6A7DFF">
+                                        <TextBlock Text="{Binding SelectedPlaylistInitial}"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="16"
+                                                   FontWeight="Bold"
+                                                   Foreground="White" />
+                                    </Border>
+                                </Grid>
+                            </Border>
+
+                            <StackPanel Grid.Column="1" Spacing="10" VerticalAlignment="Center">
+                                <TextBlock Text="歌单空间"
+                                           Foreground="#7BE6D7"
+                                           FontSize="13"
+                                           FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding SelectedPlaylistDisplayName}"
+                                           Foreground="#F6F8FF"
+                                           FontSize="30"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding SelectedPlaylistStatText}"
+                                           Foreground="#A6B7E3"
+                                           FontSize="14" />
+                                <TextBlock Text="{Binding SelectedPlaylistRuntimeText}"
+                                           Foreground="#D7E1FF"
+                                           FontSize="14" />
+                                <TextBlock Text="{Binding SelectedPlaylistDirectoryText}"
+                                           Foreground="#8EA0CE"
+                                           TextWrapping="Wrap"
+                                           MaxWidth="560" />
+                                <TextBlock Text="{Binding StatusText}"
+                                           Foreground="#D8E0FF"
+                                           TextWrapping="Wrap" />
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <Border Background="#23305A" CornerRadius="999" Padding="12,6">
+                                        <TextBlock Text="{Binding PlaylistCollectionSummary}"
+                                                   Foreground="#DDE6FF"
+                                                   FontSize="12" />
+                                    </Border>
+                                    <Border Background="#17353A" CornerRadius="999" Padding="12,6">
+                                        <TextBlock Text="{Binding PendingCoverText}"
+                                                   Foreground="#7BE6D7"
+                                                   FontSize="12" />
+                                    </Border>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <Button Classes="primary-btn"
+                                            Content="刷新歌单"
+                                            Command="{Binding RefreshCommand}" />
+                                    <Button Classes="action-btn"
+                                            Content="打开文件夹"
+                                            Command="{Binding OpenFolderCommand}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+
+                        <Border Grid.Column="1" Padding="18" Classes="glass-panel">
+                            <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="12">
+                                <TextBlock Text="全部歌单"
+                                           Foreground="#F6F8FF"
+                                           FontSize="18"
+                                           FontWeight="SemiBold" />
+                                <TextBlock Grid.Row="1"
+                                           Text="做成封面墙样式，可直接搜索和切换，当前选中歌单会有高亮边框。"
+                                           Foreground="#93A6D4"
+                                           TextWrapping="Wrap" />
+                                <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                    <TextBox Text="{Binding SearchKeyword}"
+                                             Watermark="搜索歌单名称或路径" />
+                                    <Border Grid.Column="1"
+                                            Padding="12,0"
+                                            Background="#16223F"
+                                            BorderBrush="#2E3E71"
+                                            BorderThickness="1"
+                                            CornerRadius="14">
+                                        <TextBlock Text="{Binding SearchResultText}"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="#DDE6FF"
+                                                   FontSize="12" />
+                                    </Border>
+                                </Grid>
+                                <ListBox Grid.Row="3"
+                                         Margin="0,4,0,0"
+                                         Classes="playlist-wall"
+                                         MaxHeight="420"
+                                         ItemsSource="{Binding FilteredPlaylists}"
+                                         SelectedItem="{Binding SelectedPlaylist}"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                         ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                    <ListBox.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel ItemWidth="170"
+                                                       ItemHeight="232"
+                                                       Orientation="Horizontal" />
+                                        </ItemsPanelTemplate>
+                                    </ListBox.ItemsPanel>
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="model:PlaylistInfo">
+                                            <Border Width="170"
+                                                    Height="232"
+                                                    Padding="12"
+                                                    Classes="cover-card">
+                                                <Grid RowDefinitions="134,Auto,Auto,*" RowSpacing="8">
+                                                    <Border Height="134"
+                                                            CornerRadius="18"
+                                                            Background="#1F2D5C">
+                                                        <Image Source="{Binding CoverBitmap}"
+                                                               Stretch="UniformToFill" />
+                                                    </Border>
+                                                    <TextBlock Grid.Row="1"
+                                                               Text="{Binding Name}"
+                                                               Foreground="#F7F9FF"
+                                                               FontSize="15"
+                                                               FontWeight="SemiBold"
+                                                               TextWrapping="Wrap"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               MaxHeight="40" />
+                                                    <TextBlock Grid.Row="2"
+                                                               Text="{Binding SongCountText}"
+                                                               Foreground="#7BE6D7"
+                                                               FontSize="12" />
+                                                    <StackPanel Grid.Row="3"
+                                                                VerticalAlignment="Bottom"
+                                                                Spacing="4">
+                                                        <TextBlock Text="{Binding CreatedTimeText}"
+                                                                   Foreground="#8EA0CE"
+                                                                   FontSize="12" />
+                                                        <TextBlock Text="{Binding FolderPath}"
+                                                                   Foreground="#8EA0CE"
+                                                                   FontSize="12"
+                                                                   TextWrapping="Wrap"
+                                                                   MaxHeight="34" />
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <Grid ColumnDefinitions="1.08*,0.92*" ColumnSpacing="18">
+                    <Border Padding="20" Classes="glass-panel">
+                        <Grid RowDefinitions="Auto,*" RowSpacing="16">
+                            <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="10">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="歌曲列表"
+                                               Foreground="#F7F9FF"
+                                               FontSize="22"
+                                               FontWeight="SemiBold" />
+                                    <TextBlock Text="先选择歌单，再浏览、播放或整理其中的歌曲。"
+                                               Foreground="#93A6D4" />
+                                </StackPanel>
+                                <Button Grid.Column="1"
+                                        Classes="primary-btn"
+                                        Content="添加歌曲"
+                                        Command="{Binding AddSongsCommand}" />
+                                <Button Grid.Column="2"
+                                        Classes="action-btn"
+                                        Content="播放选中"
+                                        Command="{Binding PlaySongCommand}"
+                                        CommandParameter="{Binding SelectedSong}" />
+                                <Button Grid.Column="3"
+                                        Classes="action-btn"
+                                        Content="删除选中"
+                                        Command="{Binding DeleteSelectedSongCommand}" />
+                            </Grid>
+
+                            <ListBox Grid.Row="1"
+                                     MaxHeight="760"
+                                     ItemsSource="{Binding SelectedPlaylist.Songs}"
+                                     SelectedItem="{Binding SelectedSong}"
+                                     Background="Transparent"
+                                     BorderBrush="Transparent">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="model:PlaylistSongInfo">
+                                        <Border Margin="0,0,0,12"
+                                                Padding="16"
+                                                Classes="song-card"
+                                                DoubleTapped="OnSongCardDoubleTapped">
+                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                                <StackPanel Spacing="6">
+                                                    <TextBlock Text="{Binding DisplayName}"
+                                                               Foreground="#F7F9FF"
+                                                               FontWeight="SemiBold"
+                                                               FontSize="16"
+                                                               TextWrapping="Wrap" />
+                                                    <TextBlock Text="{Binding ArtistAlbumText}"
+                                                               Foreground="#A4B4DE"
+                                                               TextWrapping="Wrap" />
+                                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                                        <Border Background="#20335C" CornerRadius="999" Padding="10,5">
+                                                            <TextBlock Text="{Binding DurationText}"
+                                                                       Foreground="#7BE6D7"
+                                                                       FontSize="12" />
+                                                        </Border>
+                                                        <Border Background="#1B2748" CornerRadius="999" Padding="10,5">
+                                                            <TextBlock Text="{Binding FileSizeText}"
+                                                                       Foreground="#D6DFFF"
+                                                                       FontSize="12" />
+                                                        </Border>
+                                                    </StackPanel>
+                                                </StackPanel>
+
+                                                <Border Grid.Column="1"
+                                                        Width="42"
+                                                        Height="42"
+                                                        CornerRadius="21"
+                                                        Background="#253560"
+                                                        HorizontalAlignment="Right"
+                                                        VerticalAlignment="Center">
+                                                    <TextBlock Text=">"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"
+                                                               Foreground="White"
+                                                               FontWeight="Bold" />
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+                    </Border>
+
+                    <StackPanel Grid.Column="1" Spacing="18">
+                        <Border Padding="20" Classes="glass-panel">
+                            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="12">
+                                <TextBlock Text="新建歌单"
+                                           Foreground="#F7F9FF"
+                                           FontSize="20"
+                                           FontWeight="SemiBold" />
+                                <TextBox Grid.Row="1"
+                                         Text="{Binding CreatePlaylistName}"
+                                         PlaceholderText="输入新歌单名称" />
+                                <TextBlock Grid.Row="2"
+                                           Text="{Binding CreatePendingCoverText}"
+                                           Foreground="#7BE6D7"
+                                           TextWrapping="Wrap" />
+                                <Border Grid.Row="3"
+                                        Width="88"
+                                        Height="88"
+                                        CornerRadius="18"
+                                        Background="#17254E"
+                                        BorderBrush="#324474"
+                                        BorderThickness="1"
+                                        HorizontalAlignment="Left">
+                                    <Image Source="{Binding CreatePendingCoverPreviewBitmap}"
+                                           Stretch="UniformToFill" />
+                                </Border>
+                                <StackPanel Grid.Row="4" Orientation="Horizontal" Spacing="10">
+                                    <Button Classes="action-btn"
+                                            Content="选择封面"
+                                            Command="{Binding BrowseCreateCoverCommand}" />
+                                    <Button Classes="action-btn"
+                                            Content="清空封面"
+                                            Command="{Binding ClearCreateCoverCommand}" />
+                                </StackPanel>
+                                <TextBox Grid.Row="5"
+                                         Text="{Binding BaseDirectory}"
+                                         PlaceholderText="歌单存储目录" />
+                                <StackPanel Grid.Row="6" Orientation="Horizontal" Spacing="10">
+                                    <Button Classes="primary-btn"
+                                            Content="创建歌单"
+                                            Command="{Binding CreatePlaylistCommand}" />
+                                    <Button Classes="action-btn"
+                                            Content="切换目录"
+                                            Command="{Binding BrowseBaseDirectoryCommand}" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <Border Padding="20" Classes="glass-panel">
+                            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="12">
+                                <TextBlock Text="{Binding SelectedPlaylistEditorTitle}"
+                                           Foreground="#F7F9FF"
+                                           FontSize="20"
+                                           FontWeight="SemiBold" />
+                                <TextBlock Grid.Row="1"
+                                           Text="{Binding SelectedPlaylistEditorHint}"
+                                           Foreground="#93A6D4"
+                                           TextWrapping="Wrap" />
+                                <TextBox Grid.Row="2"
+                                         Text="{Binding PlaylistDraftName}"
+                                         IsEnabled="{Binding HasSelectedPlaylist}"
+                                         PlaceholderText="先选择一个歌单，再修改歌单名称" />
+                                <TextBlock Grid.Row="3"
+                                           Text="{Binding PendingCoverText}"
+                                           Foreground="#7BE6D7"
+                                           TextWrapping="Wrap" />
+                                <Border Grid.Row="4"
+                                        Width="88"
+                                        Height="88"
+                                        CornerRadius="18"
+                                        Background="#17254E"
+                                        BorderBrush="#324474"
+                                        BorderThickness="1"
+                                        HorizontalAlignment="Left">
+                                    <Image Source="{Binding PendingCoverPreviewBitmap}"
+                                           Stretch="UniformToFill" />
+                                </Border>
+                                <StackPanel Grid.Row="5" Orientation="Horizontal" Spacing="10">
+                                    <Button Classes="action-btn"
+                                            Content="选择封面"
+                                            Command="{Binding BrowseCoverCommand}" />
+                                    <Button Classes="primary-btn"
+                                            Content="应用封面"
+                                            Command="{Binding ApplyCoverCommand}" />
+                                    <Button Classes="action-btn"
+                                            Content="移除封面"
+                                            Command="{Binding RemoveCoverCommand}" />
+                                </StackPanel>
+                                <StackPanel Grid.Row="6" Orientation="Horizontal" Spacing="10">
+                                    <Button Classes="primary-btn"
+                                            Content="保存歌单名"
+                                            Command="{Binding RenamePlaylistCommand}" />
+                                    <Button Classes="action-btn"
+                                            Content="删除歌单"
+                                            Command="{Binding DeletePlaylistCommand}" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <Border Padding="20" Classes="glass-panel">
+                            <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
+                                <TextBlock Text="歌词区"
+                                           Foreground="#F7F9FF"
+                                           FontSize="20"
+                                           FontWeight="SemiBold" />
+                                <TextBlock Grid.Row="1"
+                                           Text="{Binding LyricsSourceText}"
+                                           Foreground="#7BE6D7"
+                                           TextWrapping="Wrap" />
+                                <ScrollViewer Grid.Row="2"
+                                              MaxHeight="360"
+                                              VerticalScrollBarVisibility="Auto"
+                                              HorizontalScrollBarVisibility="Disabled">
+                                    <ItemsControl ItemsSource="{Binding CurrentLyrics}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Margin="0,0,0,10"
+                                                        Padding="14"
+                                                        Background="#121C3C"
+                                                        CornerRadius="16"
+                                                        BorderBrush="#223256"
+                                                        BorderThickness="1">
+                                                    <TextBlock Text="{Binding}"
+                                                               Foreground="#E7EEFF"
+                                                               TextWrapping="Wrap"
+                                                               FontSize="15" />
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="1" Padding="18,16" Classes="glass-panel">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                    <GradientStop Color="#0E1530" Offset="0" />
+                    <GradientStop Color="#15224A" Offset="0.45" />
+                    <GradientStop Color="#101735" Offset="1" />
+                </LinearGradientBrush>
+            </Border.Background>
+
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="18">
+                <Grid ColumnDefinitions="74,*" ColumnSpacing="14">
+                    <Border Width="74"
+                            Height="74"
+                            CornerRadius="22"
+                            Background="#1A2754"
+                            BorderBrush="#35508F"
+                            BorderThickness="1">
+                        <Grid>
+                            <Image Source="{Binding SelectedPlaylistCoverBitmap}"
+                                   Stretch="UniformToFill" />
+                            <TextBlock Text="{Binding SelectedPlaylistInitial}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Foreground="White"
+                                       FontSize="20"
+                                       FontWeight="Bold" />
+                        </Grid>
+                    </Border>
+
+                    <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding CurrentSongName}"
+                                   Foreground="#F7F9FF"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding CurrentSongSubtitle}"
+                                   Foreground="#9DB0DE"
+                                   TextWrapping="Wrap"
+                                   MaxWidth="420" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Border Background="#20315E" CornerRadius="999" Padding="10,5">
+                                <TextBlock Text="{Binding PlaybackStateText}"
+                                           Foreground="#DCE5FF"
+                                           FontSize="12" />
+                            </Border>
+                            <Border Background="#17353A" CornerRadius="999" Padding="10,5">
+                                <TextBlock Text="{Binding VolumePercentText}"
+                                           Foreground="#7BE6D7"
+                                           FontSize="12" />
+                            </Border>
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="8">
+                    <Slider Minimum="0"
+                            Maximum="{Binding TotalDurationSeconds}"
+                            Value="{Binding CurrentPositionSeconds, Mode=TwoWay}" />
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <TextBlock Text="{Binding CurrentPositionText}"
+                                   Foreground="#8FA0CB" />
+                        <TextBlock Grid.Column="2"
+                                   Text="{Binding TotalDurationText}"
+                                   Foreground="#8FA0CB" />
+                    </Grid>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
+                            Spacing="10"
+                            VerticalAlignment="Center">
+                    <Button Classes="action-btn"
+                            Content="上一首"
+                            Command="{Binding PreviousSongCommand}" />
+                    <Button Classes="primary-btn"
+                            Content="播放 / 暂停"
+                            Command="{Binding TogglePlaybackCommand}" />
+                    <Button Classes="action-btn"
+                            Content="下一首"
+                            Command="{Binding NextSongCommand}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
